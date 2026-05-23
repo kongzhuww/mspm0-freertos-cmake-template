@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "[1] 构建本地测试 (Local Test)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Write-Host '==> 开始配置本地测试环境' -ForegroundColor Cyan; cmake -G Ninja -B build_host; if (-not $?) { Write-Host '[失败] 本地环境配置失败' -ForegroundColor Red; exit 1 }; Write-Host '==> 开始编译本地测试' -ForegroundColor Cyan; cmake --build build_host; if ($?) { Write-Host '[成功] 本地测试编译成功!' -ForegroundColor Green } else { Write-Host '[失败] 本地测试编译失败' -ForegroundColor Red; exit 1 }"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "label": "[2] 构建单片机固件 (MCU Firmware)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Write-Host '==> 开始配置单片机交叉编译环境' -ForegroundColor Cyan; cmake -DCMAKE_TOOLCHAIN_FILE=\"gcc-arm-none-eabi.cmake\" -G Ninja -B build; if (-not $?) { Write-Host '[失败] 单片机环境配置失败' -ForegroundColor Red; exit 1 }; Write-Host '==> 开始编译单片机固件' -ForegroundColor Cyan; cmake --build build; if ($?) { Write-Host '[成功] 单片机固件编译成功!' -ForegroundColor Green } else { Write-Host '[失败] 单片机固件编译失败' -ForegroundColor Red; exit 1 }"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build"
+        },
+        {
+            "label": "[3] 烧录单片机固件 (Flash MCU)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Write-Host '==> 开始烧录固件到单片机...' -ForegroundColor Cyan; openocd -f interface/cmsis-dap.cfg -c \"adapter speed 2000\" -f target/ti_mspm0.cfg -c \"program build/MSPM0G3507_FreeRTOS.elf verify reset exit\"; if ($?) { Write-Host '[成功] 烧录成功，单片机已重启!' -ForegroundColor Green } else { Write-Host '[失败] 烧录烧录失败，请检查连接或配置文件' -ForegroundColor Red; exit 1 }"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "group": "test"
+        }
+    ]
+}

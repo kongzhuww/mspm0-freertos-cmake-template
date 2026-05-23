@@ -1,0 +1,6 @@
+# ninja log v7
+4	125	8010742812130003	CMakeFiles/run_tests.dir/test/test_app_control.c.obj	8a5f484175989211
+5	157	8010736646465764	CMakeFiles/run_tests.dir/src/app_control.c.obj	ba7f03682c6ac3b8
+16	168	8010736646581866	CMakeFiles/run_tests.dir/test/unity/unity.c.obj	d3ba4c9069140d23
+142	299	8010740595564035	run_tests.exe	e841cd5bac277b11
+4	147	8010742948240713	run_tests.exe	e841cd5bac277b11

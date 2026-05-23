@@ -1,0 +1,33 @@
+# CMake and build outputs
+build/
+build-test/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Object files and binaries
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.a
+*.lib
+
+# Editor and IDE
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# clang-tidy / clang-format
+compile_commands.json
