@@ -25,17 +25,7 @@ if(CMAKE_CROSSCOMPILING)
     set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CPU_FLAGS} -x assembler-with-cpp")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CPU_FLAGS} --specs=nano.specs --specs=nosys.specs -Wl,-Map=${PROJECT_NAME}.map -Wl,--gc-sections")
 
-    # 全局宏定义
-    add_definitions(-D__MSPM0G3507__)
-
-    # 包含路径
-    include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/third_party/CMSIS/Core/Include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/portable/GCC/ARM_CM0
-    )
+    # (已移除全局 add_definitions 和 include_directories，改为 Target 精准配置)
 
     # 业务源码
     set(APP_SOURCES
@@ -71,9 +61,21 @@ if(CMAKE_CROSSCOMPILING)
 
     # 将第三方代码编译为静态库
     add_library(third_party_lib STATIC ${THIRD_PARTY_SOURCES})
+    # 为第三方库配置专属的宏和头文件，并设为 PUBLIC 传递给依赖它的主程序
+    target_compile_definitions(third_party_lib PUBLIC -D__MSPM0G3507__)
+    target_include_directories(third_party_lib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/third_party/CMSIS/Core/Include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/portable/GCC/ARM_CM0
+    )
 
     # 编译主程序
     add_executable(${PROJECT_NAME}.elf ${APP_SOURCES})
+    # 为主程序配置专属的业务头文件
+    target_include_directories(${PROJECT_NAME}.elf PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
 
     # 仅将业务代码单独开启 clang-tidy 静态检查
     if(CLANG_TIDY_EXE)
@@ -98,13 +100,14 @@ else()
     # 启用测试
     enable_testing()
     
-    include_directories(
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/unity
-    )
+    # (已移除全局 include_directories，改为 Target 精准配置)
     
     # 将 Unity 框架剥离为静态库，免受 clang-tidy 打扰
     add_library(unity_lib STATIC ${CMAKE_CURRENT_SOURCE_DIR}/test/unity/unity.c)
+    # 为 Unity 库配置头文件，并设为 PUBLIC 传递给依赖它的测试程序
+    target_include_directories(unity_lib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/test/unity
+    )
     
     set(TEST_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/app_control.c
@@ -112,6 +115,10 @@ else()
     )
     
     add_executable(run_tests ${TEST_SOURCES})
+    # 为测试程序配置业务头文件
+    target_include_directories(run_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
     target_link_libraries(run_tests PRIVATE unity_lib)
 
     # 仅将单元测试及业务代码单独开启 clang-tidy 静态检查
