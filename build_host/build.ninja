@@ -36,13 +36,44 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = D$:/mspm0/build_host/
 # =============================================================================
+# Object build statements for STATIC_LIBRARY target unity_lib
+
+
+#############################################
+# Order-only phony target for unity_lib
+
+build cmake_object_order_depends_target_unity_lib: phony || .
+
+build CMakeFiles/unity_lib.dir/test/unity/unity.c.obj: C_COMPILER__unity_lib_unscanned_ D$:/mspm0/test/unity/unity.c || cmake_object_order_depends_target_unity_lib
+  DEP_FILE = CMakeFiles\unity_lib.dir\test\unity\unity.c.obj.d
+  FLAGS = -std=gnu11 -fdiagnostics-format=json
+  INCLUDES = -ID:/mspm0/test/unity
+  OBJECT_DIR = CMakeFiles\unity_lib.dir
+  OBJECT_FILE_DIR = CMakeFiles\unity_lib.dir\test\unity
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target unity_lib
+
+
+#############################################
+# Link the static library libunity_lib.a
+
+build libunity_lib.a: C_STATIC_LIBRARY_LINKER__unity_lib_ CMakeFiles/unity_lib.dir/test/unity/unity.c.obj
+  OBJECT_DIR = CMakeFiles\unity_lib.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_FILE = libunity_lib.a
+  TARGET_PDB = unity_lib.a.dbg
+
+# =============================================================================
 # Object build statements for EXECUTABLE target run_tests
 
 
 #############################################
 # Order-only phony target for run_tests
 
-build cmake_object_order_depends_target_run_tests: phony || .
+build cmake_object_order_depends_target_run_tests: phony || cmake_object_order_depends_target_unity_lib
 
 build CMakeFiles/run_tests.dir/src/app_control.c.obj: C_COMPILER__run_tests_unscanned_ D$:/mspm0/src/app_control.c || cmake_object_order_depends_target_run_tests
   DEP_FILE = CMakeFiles\run_tests.dir\src\app_control.c.obj.d
@@ -50,13 +81,6 @@ build CMakeFiles/run_tests.dir/src/app_control.c.obj: C_COMPILER__run_tests_unsc
   INCLUDES = -ID:/mspm0/include -ID:/mspm0/test/unity
   OBJECT_DIR = CMakeFiles\run_tests.dir
   OBJECT_FILE_DIR = CMakeFiles\run_tests.dir\src
-
-build CMakeFiles/run_tests.dir/test/unity/unity.c.obj: C_COMPILER__run_tests_unscanned_ D$:/mspm0/test/unity/unity.c || cmake_object_order_depends_target_run_tests
-  DEP_FILE = CMakeFiles\run_tests.dir\test\unity\unity.c.obj.d
-  FLAGS = -std=gnu11 -fdiagnostics-format=json
-  INCLUDES = -ID:/mspm0/include -ID:/mspm0/test/unity
-  OBJECT_DIR = CMakeFiles\run_tests.dir
-  OBJECT_FILE_DIR = CMakeFiles\run_tests.dir\test\unity
 
 build CMakeFiles/run_tests.dir/test/test_app_control.c.obj: C_COMPILER__run_tests_unscanned_ D$:/mspm0/test/test_app_control.c || cmake_object_order_depends_target_run_tests
   DEP_FILE = CMakeFiles\run_tests.dir\test\test_app_control.c.obj.d
@@ -73,8 +97,8 @@ build CMakeFiles/run_tests.dir/test/test_app_control.c.obj: C_COMPILER__run_test
 #############################################
 # Link the executable run_tests.exe
 
-build run_tests.exe: C_EXECUTABLE_LINKER__run_tests_ CMakeFiles/run_tests.dir/src/app_control.c.obj CMakeFiles/run_tests.dir/test/unity/unity.c.obj CMakeFiles/run_tests.dir/test/test_app_control.c.obj
-  LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
+build run_tests.exe: C_EXECUTABLE_LINKER__run_tests_ CMakeFiles/run_tests.dir/src/app_control.c.obj CMakeFiles/run_tests.dir/test/test_app_control.c.obj | libunity_lib.a || libunity_lib.a
+  LINK_LIBRARIES = libunity_lib.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\run_tests.dir
   POST_BUILD = cd .
   PRE_LINK = cd .
@@ -87,7 +111,7 @@ build run_tests.exe: C_EXECUTABLE_LINKER__run_tests_ CMakeFiles/run_tests.dir/sr
 # Utility command for test
 
 build CMakeFiles/test.util: CUSTOM_COMMAND
-  COMMAND = C:\windows\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\ctest.exe "
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\ctest.exe "
   DESC = Running tests...
   pool = console
   restat = 1
@@ -99,7 +123,7 @@ build test: phony CMakeFiles/test.util
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = C:\windows\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\cmake.exe -E echo "No interactive CMake dialog available.""
   DESC = No interactive CMake dialog available...
   restat = 1
 
@@ -110,7 +134,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = C:\windows\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\cmake.exe --regenerate-during-build -SD:\mspm0 -BD:\mspm0\build_host"
+  COMMAND = C:\WINDOWS\system32\cmd.exe /C "cd /D D:\mspm0\build_host && D:\ming64-new\mingw64\bin\cmake.exe --regenerate-during-build -SD:\mspm0 -BD:\mspm0\build_host"
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -122,6 +146,8 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 
 build run_tests: phony run_tests.exe
 
+build unity_lib: phony libunity_lib.a
+
 # =============================================================================
 # Folder targets.
 
@@ -130,7 +156,7 @@ build run_tests: phony run_tests.exe
 #############################################
 # Folder: D:/mspm0/build_host
 
-build all: phony run_tests.exe
+build all: phony libunity_lib.a run_tests.exe
 
 # =============================================================================
 # Built-in targets

@@ -99,9 +99,14 @@ int _write(int file, char *ptr, int len)
 {
     int i;
     for (i = 0; i < len; i++) {
-        // 等待串口空闲
+        // 如果遇到换行符，自动补充回车符，防止串口助手出现阶梯状输出
+        if (ptr[i] == '\n') {
+            while( DL_UART_isBusy(UART_DEBUG_INST) == true );
+            DL_UART_Main_transmitData(UART_DEBUG_INST, '\r');
+        }
+        
+        // 等待串口空闲并发送当前数据
         while( DL_UART_isBusy(UART_DEBUG_INST) == true );
-        // 发送数据
         DL_UART_Main_transmitData(UART_DEBUG_INST, ptr[i]);
     }
     return len;
