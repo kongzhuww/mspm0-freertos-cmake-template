@@ -84,8 +84,8 @@ if(CMAKE_CROSSCOMPILING)
         set_target_properties(${PROJECT_NAME}.elf PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
     endif()
 
-    # 链接静态库和链接脚本
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE third_party_lib ${DRIVERLIB_PATH})
+    # 链接静态库和链接脚本 (通过 --whole-archive 强制链接整个第三方库，防止 FreeRTOS 的中断处理函数被优化剥离)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE -Wl,--whole-archive third_party_lib -Wl,--no-whole-archive ${DRIVERLIB_PATH})
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计
