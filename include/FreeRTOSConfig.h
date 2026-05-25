@@ -108,6 +108,7 @@
  */
 #define configUSE_QUEUE_SETS 0
 #define configUSE_TASK_NOTIFICATIONS 1                // 启用任务通知功能
+#define configUSE_STREAM_BUFFERS 1                     // 启用原生流缓冲区 (StreamBuffer)
 
 /* 定义应使用哪些钩子（回调）函数的常量 */
 #define configUSE_IDLE_HOOK 0                          // 禁用空闲钩子函数

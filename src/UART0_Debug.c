@@ -94,21 +94,43 @@ void _sys_exit(int x)
 #endif
 
 #if defined(__GNUC__)
+#include "FreeRTOS.h"
+#include "stream_buffer.h"
+#include "semphr.h"
+
+extern StreamBufferHandle_t uart_stream_buffer;
+extern SemaphoreHandle_t logger_mutex;
+
 // 适配 GCC 环境的 printf 重定向
 int _write(int file, char *ptr, int len)
 {
-    int i;
-    for (i = 0; i < len; i++) {
-        // 如果遇到换行符，自动补充回车符，防止串口助手出现阶梯状输出
-        if (ptr[i] == '\n') {
+    // 如果异步日志引擎还未初始化，回退到原生的硬件阻塞发送
+    if (uart_stream_buffer == NULL || logger_mutex == NULL) {
+        int i;
+        for (i = 0; i < len; i++) {
+            if (ptr[i] == '\n') {
+                while( DL_UART_isBusy(UART_DEBUG_INST) == true );
+                DL_UART_Main_transmitData(UART_DEBUG_INST, '\r');
+            }
             while( DL_UART_isBusy(UART_DEBUG_INST) == true );
-            DL_UART_Main_transmitData(UART_DEBUG_INST, '\r');
+            DL_UART_Main_transmitData(UART_DEBUG_INST, ptr[i]);
         }
-        
-        // 等待串口空闲并发送当前数据
-        while( DL_UART_isBusy(UART_DEBUG_INST) == true );
-        DL_UART_Main_transmitData(UART_DEBUG_INST, ptr[i]);
+        return len;
     }
+
+    // 异步日志引擎已启动：受互斥锁保护，将数据直接推入环形内存，极其快速
+    if (xSemaphoreTake(logger_mutex, portMAX_DELAY) == pdTRUE) {
+        int i;
+        for (i = 0; i < len; i++) {
+            if (ptr[i] == '\n') {
+                char cr = '\r';
+                xStreamBufferSend(uart_stream_buffer, &cr, 1, portMAX_DELAY);
+            }
+            xStreamBufferSend(uart_stream_buffer, &ptr[i], 1, portMAX_DELAY);
+        }
+        xSemaphoreGive(logger_mutex);
+    }
+    
     return len;
 }
 #endif

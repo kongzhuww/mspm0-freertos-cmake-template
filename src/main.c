@@ -41,6 +41,7 @@
 
 #include "board_led.h"
 #include "UART0_Debug.h"
+#include "logger.h"
 #include "tim_delay.h"
 #include "app_control.h"
 
@@ -64,7 +65,8 @@ static void vPrintTask(void *pvParameters);
 int main(void)
 {
     SYSCFG_DL_init();
-	debug_uart_init();
+    debug_uart_init();
+    logger_init(); // 初始化异步日志引擎
     
     /* 创建静态任务 - LED闪烁任务 */
     xTaskCreateStatic(
@@ -136,7 +138,7 @@ static void vLedBlinkTask(void *pvParameters)
                     
                     // 打印按键触发日志
                     led_state_e led_state = get_board_led_state();
-                    printf("[Decoupled Engine] KEY (PB21) Pressed! LED (PB14) toggled to %s\r\n", (led_state == LED_ON) ? "ON" : "OFF");
+                    LOG_INFO("KEY (PB21) Pressed! LED (PB14) toggled to %s", (led_state == LED_ON) ? "ON" : "OFF");
                 }
                 
                 /* 等待按键释放，防止连续触发 */
@@ -167,10 +169,8 @@ static void vPrintTask(void *pvParameters)
     /* 无限循环 */
     for (;;)
     {
-
-
-		 printf("DJmotor_task_dt \n");
-        /* 延时1000ms */
+        LOG_INFO("DJmotor_task_dt");
+        /* 延时500ms */
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

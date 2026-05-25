@@ -36,6 +36,7 @@ if(CMAKE_CROSSCOMPILING)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/UART0_Debug.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/tim_delay.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/app_control.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
     )
 
     # 第三方库源码 (FreeRTOS及启动文件)
