@@ -27,23 +27,6 @@ if(CMAKE_CROSSCOMPILING)
 
     # (已移除全局 add_definitions 和 include_directories，改为 Target 精准配置)
 
-    # ================= SysConfig 自动化集成 =================
-    # 自动搜索 SysConfig 安装路径 (支持 C 盘默认路径)
-    file(GLOB SYSCFG_PATHS "C:/ti/sysconfig_*")
-    find_program(SYSCFG_CMD NAMES sysconfig_cli.bat sysconfig_cli.sh PATHS ${SYSCFG_PATHS} ENV SYSCFG_ROOT)
-
-    if(SYSCFG_CMD)
-        message(STATUS "SysConfig CLI found: ${SYSCFG_CMD}")
-        # 如果找到 SysConfig，添加一条规则，在编译前自动根据 syscfg 文件重新生成代码
-        add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/ti_msp_dl_config.c ${CMAKE_CURRENT_SOURCE_DIR}/src/ti_msp_dl_config.h
-            COMMAND ${SYSCFG_CMD} -s ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/.metadata/product.json -o ${CMAKE_CURRENT_SOURCE_DIR}/src --compiler gcc ${CMAKE_CURRENT_SOURCE_DIR}/empty.syscfg
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/empty.syscfg
-            COMMENT "Auto-generating SysConfig files (ti_msp_dl_config)..."
-        )
-    else()
-        message(WARNING "SysConfig CLI not found! Please set SYSCFG_ROOT in your environment variables. Using existing ti_msp_dl_config fallback.")
-    endif()
 
     # 业务源码
     set(APP_SOURCES
@@ -82,6 +65,7 @@ if(CMAKE_CROSSCOMPILING)
     # 为第三方库配置专属的宏和头文件，并设为 PUBLIC 传递给依赖它的主程序
     target_compile_definitions(third_party_lib PUBLIC -D__MSPM0G3507__)
     target_include_directories(third_party_lib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/third_party/CMSIS/Core/Include
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/include

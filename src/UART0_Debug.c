@@ -93,3 +93,17 @@ void _sys_exit(int x)
 }
 #endif
 
+#if defined(__GNUC__)
+// 适配 GCC 环境的 printf 重定向
+int _write(int file, char *ptr, int len)
+{
+    int i;
+    for (i = 0; i < len; i++) {
+        // 等待串口空闲
+        while( DL_UART_isBusy(UART_DEBUG_INST) == true );
+        // 发送数据
+        DL_UART_Main_transmitData(UART_DEBUG_INST, ptr[i]);
+    }
+    return len;
+}
+#endif
