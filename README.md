@@ -40,34 +40,33 @@ MSPM0_Template/
 ## 🏃 快速入门 (MCU 开发)
 
 ### 1. 编译固件
-在项目根目录下，执行以下命令进行交叉编译（或者直接在 VS Code 中运行 `CMake: Configure` 和 `CMake: Build` 任务）：
+在项目根目录下，直接执行我们专门封装的极简构建脚本即可完成交叉编译：
 ```bash
-cmake -DCMAKE_TOOLCHAIN_FILE=gcc-arm-none-eabi.cmake -G Ninja -B build
-cmake --build build
+.\run.bat build
 ```
+*(底层实际执行了 `cmake -DCMAKE_TOOLCHAIN_FILE=...` 和 `cmake --build`)*
+
 编译成功后，在 `build/` 目录下将生成目标固件。
 
 ### 2. DAPLink 一键烧录
 连接 DAPLink 开发板至 PC。您可以：
 - 在 VS Code 中按下快捷键呼出任务列表，选择 `DAPLink: Flash`。
-- 或在命令行直接运行：
+- 或者在命令行直接运行一键烧录脚本：
   ```bash
-  openocd -f interface/cmsis-dap.cfg -c "adapter speed 2000" -f target/ti_mspm0.cfg -c "program build/MSPM0G3507_FreeRTOS.elf verify reset exit"
+  .\run.bat flash
   ```
+  *(脚本会自动调用 OpenOCD 并执行 verify, reset 操作)*
 
 ## 🧪 PC 端单元测试 (无需硬件)
 
 本模板实现了完美的逻辑解耦。您的核心逻辑代码 `app_control.c` 可以直接在宿主机（如您的 Windows 电脑）上通过普通的 GCC 编译并运行测试用例。
 
-执行以下命令：
+执行极简测试指令：
 ```bash
-# 配置为本地编译模式
-cmake -B build-test
-# 编译测试用例
-cmake --build build-test
-# 运行单元测试
-./build-test/run_tests
+.\run.bat test
 ```
+该指令会自动完成测试固件的 CMake 配置、编译并立即执行 `run_tests.exe`。
+
 您将看到类似如下的美妙输出：
 ```text
 --- Test Suite Started ---
