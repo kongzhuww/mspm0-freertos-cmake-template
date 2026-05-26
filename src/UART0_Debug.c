@@ -35,6 +35,16 @@ extern SemaphoreHandle_t logger_mutex;
 // 适配 GCC 环境的 printf 重定向
 int _write(int file, char *ptr, int len)
 {
+    // [致命防坑] 判断当前是否处于中断上下文 (ISR)。
+    // 在 Cortex-M0+ 中，读取 SCB->ICSR (Interrupt Control and State Register) 寄存器
+    // 的最低 6 位 (VECTACTIVE) 即可判断。如果非零，说明正在中断处理函数中。
+    // 中断中严禁调用带阻塞属性的 FreeRTOS API，否则秒死锁/HardFault！
+    if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0) {
+        // 如果实在想看中断里的打印，可以放开这里的底层硬件轮询发送。
+        // 但为了保证中断不被拖慢，直接丢弃是最安全的做法。
+        return len;
+    }
+
     // 如果异步日志引擎还未初始化，回退到原生的硬件阻塞发送
     if (uart_stream_buffer == NULL || logger_mutex == NULL) {
         int i;

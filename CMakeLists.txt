@@ -75,10 +75,6 @@ if(CMAKE_CROSSCOMPILING)
 
     # 编译主程序
     add_executable(${PROJECT_NAME}.elf ${APP_SOURCES})
-    # 为主程序配置专属的业务头文件
-    target_include_directories(${PROJECT_NAME}.elf PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
 
     # 仅将业务代码单独开启 clang-tidy 静态检查
     if(CLANG_TIDY_EXE)
