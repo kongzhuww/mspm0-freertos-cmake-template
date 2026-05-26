@@ -27,9 +27,13 @@
   - `FreeRTOSConfig.h` 开启了 `configUSE_STREAM_BUFFERS 1`。
   - 重构了 GCC 的底层重定向 `_write`。当调用 `printf` 或 `LOG_INFO` 宏时，数据受 Mutex 保护瞬间推入 512 字节的环形缓冲区 (StreamBuffer)，实现了微秒级的零阻塞。
   - 系统启动了一个静态优先级为 0 (空闲级) 的 `LoggerTask` 后台任务，在不抢占任何核心业务的情况下，通过底层 UART 轮询完成物理发送。
-- **注意事项**: 任何新增任务都可以安全、高频地调用 `LOG_INFO` 等宏，**不会**因为串口的硬件传输耗时而阻塞业务。
+- **中断防死锁保护 (重点!)**: RTOS 中的 `StreamBuffer` 阻塞调用严禁在中断上下文 (ISR) 中使用。我们在 `_write` 函数底层通过嗅探 ARM Cortex-M0+ 的 `SCB->ICSR` 寄存器自动拦截了中断中的打印请求。尽管如此，依然**严禁在硬件中断中调用 `LOG_INFO`**！
 
-### 3.3 GCC Newlib-Nano 库与浮点/换行处理
+### 3.3 极致防错与低功耗架构
+- **栈溢出“遗言”机制**: 若开发中遇到单片机突然卡死，通常是由于任务栈溢出 (`Stack Overflow`) 导致。系统已重写了 `vApplicationStackOverflowHook`，在死机前会通过极其可靠的**纯硬件串口轮询**将越界任务的名称打印出来。
+- **微安级休眠**: 系统开启了 `configUSE_IDLE_HOOK`，任何时候当 RTOS 没有高优先级任务时（例如等待 20ms 的 Delay），将自动执行 `__WFI()` 指令挂起 CPU 时钟。这种设计将待机功耗降至了极限。
+
+### 3.4 GCC Newlib-Nano 库与浮点/换行处理
 - 编译启用了极简裸机标准库 `--specs=nano.specs --specs=nosys.specs` 以节省 Flash。
 - 在 `_write` 重定向底层（`UART0_Debug.c`），已经实现了 `\n` 自动转换为 `\r\n` 的逻辑，所以在 `printf` 和日志宏中只需使用 `\n` 即可。
 
