@@ -6,7 +6,6 @@ temp_build/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
-Makefile
 *.cmake
 !gcc-arm-none-eabi.cmake
 !.vscode/tasks.json
