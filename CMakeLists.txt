@@ -16,6 +16,12 @@ if(CLANG_TIDY_EXE)
     set(MY_CLANG_TIDY_CMD "${CLANG_TIDY_EXE};-checks=-*,readability-*,bugprone-*")
 endif()
 
+# ==============================================================================
+# 引入比赛专用驱动组件库 (Components)
+# ==============================================================================
+# 这行代码会将 components/ 目录下的所有独立外设驱动加入到构建树中
+add_subdirectory(components)
+
 if(CMAKE_CROSSCOMPILING)
     # --------- 交叉编译到单片机 ---------
     
@@ -82,7 +88,8 @@ if(CMAKE_CROSSCOMPILING)
     endif()
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE third_party_lib ${DRIVERLIB_PATH})
+    # 若需使用驱动，将组件名称（如 component_dummy_sensor）追加在下方
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE third_party_lib ${DRIVERLIB_PATH} component_dummy_sensor)
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计
@@ -118,7 +125,7 @@ else()
     target_include_directories(run_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
-    target_link_libraries(run_tests PRIVATE unity_lib)
+    target_link_libraries(run_tests PRIVATE unity_lib component_dummy_sensor)
 
     # 仅将单元测试及业务代码单独开启 clang-tidy 静态检查
     if(CLANG_TIDY_EXE)
