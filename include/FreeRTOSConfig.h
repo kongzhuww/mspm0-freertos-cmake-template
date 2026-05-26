@@ -113,7 +113,7 @@
 #define configUSE_STREAM_BUFFERS 1                     // 启用原生流缓冲区 (StreamBuffer)
 
 /* 定义应使用哪些钩子（回调）函数的常量 */
-#define configUSE_IDLE_HOOK 0                          // 禁用空闲钩子函数
+#define configUSE_IDLE_HOOK 1                          // 启用空闲钩子函数
 #define configUSE_TICK_HOOK 0                          // 禁用滴答钩子函数
 #define configUSE_MALLOC_FAILED_HOOK 0                 // 禁用内存分配失败钩子函数
 
