@@ -102,12 +102,15 @@ static void vLedBlinkTask(void *pvParameters)
         // 3. 处理逻辑层输出
         if (toggled || app_ctx.need_toggle)
         {
-            /* 触发物理层翻转LED状态 */
-            board_led_toggle();
+            /* 物理层绝对服从逻辑层状态（不使用相对翻转） */
+            if (app_ctx.led_state == APP_LED_ON) {
+                board_led_on();
+            } else {
+                board_led_off();
+            }
             
             // 打印按键触发日志
-            led_state_e led_state = get_board_led_state();
-            LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (led_state == LED_ON) ? "ON" : "OFF");
+            LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (app_ctx.led_state == APP_LED_ON) ? "ON" : "OFF");
         }
         
         // 4. 释放 CPU 并设定 20ms 采样周期

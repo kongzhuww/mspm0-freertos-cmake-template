@@ -24,11 +24,11 @@ flash:
 
 test:
 	@echo "[AI-Script] Running host unit tests..."
-	cmake -G Ninja -B build-test
-	cmake --build build-test
-	./build-test/run_tests
+	cmake -G Ninja -B build_host
+	cmake --build build_host
+	./build_host/run_tests
 
 clean:
 	@echo "[AI-Script] Cleaning build directories..."
-	rm -rf build build-test
+	rm -rf build build_host
 	@echo "Done."

@@ -30,16 +30,16 @@ exit /b %errorlevel%
 
 :test
 echo [AI-Script] Running host unit tests...
-cmake -G Ninja -B build-test
+cmake -G Ninja -B build_host
 if %errorlevel% neq 0 exit /b %errorlevel%
-cmake --build build-test
+cmake --build build_host
 if %errorlevel% neq 0 exit /b %errorlevel%
-.\build-test\run_tests.exe
+.\build_host\run_tests.exe
 exit /b %errorlevel%
 
 :clean
 echo [AI-Script] Cleaning build directories...
 if exist build rmdir /s /q build
-if exist build-test rmdir /s /q build-test
+if exist build_host rmdir /s /q build_host
 echo Done.
 exit /b 0
