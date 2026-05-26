@@ -47,19 +47,14 @@
 
 /* 定义任务栈大小和优先级 */
 #define LED_TASK_STACK_SIZE      1024
-#define PRINT_TASK_STACK_SIZE    1024
 #define LED_TASK_PRIORITY        1
-#define PRINT_TASK_PRIORITY      1
 
 /* 静态任务控制块和栈空间 */
 static StaticTask_t led_task_tcb;
 static StackType_t led_task_stack[LED_TASK_STACK_SIZE];
-static StaticTask_t print_task_tcb;
-static StackType_t print_task_stack[PRINT_TASK_STACK_SIZE];
 
 /* 任务函数原型 */
 static void vLedBlinkTask(void *pvParameters);
-static void vPrintTask(void *pvParameters);
 
 
 int main(void)
@@ -77,17 +72,6 @@ int main(void)
         LED_TASK_PRIORITY,          /* 优先级 */
         led_task_stack,             /* 栈内存 */
         &led_task_tcb               /* 任务控制块 */
-    );
-    
-    /* 创建静态任务 - 打印任务 */
-    xTaskCreateStatic(
-        vPrintTask,                 /* 任务函数 */
-        "PrintTask",                /* 任务名称 */
-        PRINT_TASK_STACK_SIZE,      /* 栈深度 */
-        NULL,                       /* 参数 */
-        PRINT_TASK_PRIORITY,        /* 优先级 */
-        print_task_stack,           /* 栈内存 */
-        &print_task_tcb             /* 任务控制块 */
     );
     
     /* 启动调度器 */
@@ -159,23 +143,6 @@ static void vLedBlinkTask(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
-
-/* 打印任务实现 */
-static void vPrintTask(void *pvParameters)
-{
-    /* 防止编译器警告 */
-    (void) pvParameters;
-
-    /* 无限循环 */
-    for (;;)
-    {
-        LOG_INFO("DJmotor_task_dt");
-        /* 延时500ms */
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-
-
 
 
 

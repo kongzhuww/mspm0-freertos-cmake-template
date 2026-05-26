@@ -7,7 +7,6 @@
 //#define delay_us(us)		delay_cycles((CPUCLK_FREQ/1000000)*(us));
 
 void delay_us(uint16_t us);
-void delay_ms(uint16_t ms);
 
 #endif
 
