@@ -18,7 +18,7 @@ exit /b 1
 
 :build
 echo [AI-Script] Starting cross-compilation...
-cmake -DCMAKE_TOOLCHAIN_FILE=gcc-arm-none-eabi.cmake -G Ninja -B build
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE="gcc-arm-none-eabi.cmake" -G Ninja -B build
 if %errorlevel% neq 0 exit /b %errorlevel%
 cmake --build build
 exit /b %errorlevel%

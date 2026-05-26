@@ -87,11 +87,6 @@ extern "C" {
 #define TIM_delay_us_INST_IRQHandler                            TIMA0_IRQHandler
 #define TIM_delay_us_INST_INT_IRQN                              (TIMA0_INT_IRQn)
 #define TIM_delay_us_INST_LOAD_VALUE                                        (0U)
-/* Defines for TIM_delay_ms */
-#define TIM_delay_ms_INST                                                (TIMA1)
-#define TIM_delay_ms_INST_IRQHandler                            TIMA1_IRQHandler
-#define TIM_delay_ms_INST_INT_IRQN                              (TIMA1_INT_IRQn)
-#define TIM_delay_ms_INST_LOAD_VALUE                                        (1U)
 
 
 
@@ -137,7 +132,6 @@ void SYSCFG_DL_initPower(void);
 void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_TIM_delay_us_init(void);
-void SYSCFG_DL_TIM_delay_ms_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);
 
 

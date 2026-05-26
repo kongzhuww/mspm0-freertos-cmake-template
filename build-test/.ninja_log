@@ -1,0 +1,9 @@
+# ninja log v7
+4	151	8012050320515721	CMakeFiles/run_tests.dir/src/app_control.c.obj	ba7f03682c6ac3b8
+16	165	8012050320625815	CMakeFiles/run_tests.dir/test/unity/unity.c.obj	d3ba4c9069140d23
+28	169	8012050320751072	CMakeFiles/run_tests.dir/test/test_app_control.c.obj	8a5f484175989211
+169	328	8012050322159677	run_tests.exe	9d4ee5d39e2bc736
+3	33	8012050319980419	clean	7b7717920e28783e
+13	1859	8014743004943167	CMakeFiles/unity_lib.dir/test/unity/unity.c.obj	14148f9011cbd99e
+1862	5854	8014743023428211	libunity_lib.a	a64bdd81d7582b3
+5854	7377	8014743063349928	run_tests.exe	432f66c393d5ae19

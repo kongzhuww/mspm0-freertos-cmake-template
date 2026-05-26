@@ -21,15 +21,18 @@ if(CMAKE_CROSSCOMPILING)
     
     # 设置目标 CPU 和交叉编译标志
     set(CPU_FLAGS "-mcpu=cortex-m0plus -mthumb")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CPU_FLAGS} -ffunction-sections -fdata-sections -Wall -O2")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CPU_FLAGS} -g -ffunction-sections -fdata-sections -Wall")
+    set(CMAKE_C_FLAGS_DEBUG "-O0")
+    set(CMAKE_C_FLAGS_RELEASE "-O2")
     set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CPU_FLAGS} -x assembler-with-cpp")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CPU_FLAGS} --specs=nano.specs --specs=nosys.specs -Wl,-Map=${PROJECT_NAME}.map -Wl,--gc-sections")
 
     # (已移除全局 add_definitions 和 include_directories，改为 Target 精准配置)
 
 
-    # 业务源码
+    # 业务源码 (启动文件一并算入，保证精确链接)
     set(APP_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/devices/startup_mspm0g350x_gcc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ti_msp_dl_config.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/board_led.c
@@ -39,10 +42,8 @@ if(CMAKE_CROSSCOMPILING)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/logger.c
     )
 
-    # 第三方库源码 (FreeRTOS及启动文件)
+    # 第三方库源码 (FreeRTOS及其他纯净库代码)
     set(THIRD_PARTY_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/devices/startup_mspm0g350x_gcc.c
-        
         # FreeRTOS
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/src/croutine.c
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/src/event_groups.c
@@ -84,8 +85,8 @@ if(CMAKE_CROSSCOMPILING)
         set_target_properties(${PROJECT_NAME}.elf PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
     endif()
 
-    # 链接静态库和链接脚本 (通过 --whole-archive 强制链接整个第三方库，防止 FreeRTOS 的中断处理函数被优化剥离)
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE -Wl,--whole-archive third_party_lib -Wl,--no-whole-archive ${DRIVERLIB_PATH})
+    # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE third_party_lib ${DRIVERLIB_PATH})
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计

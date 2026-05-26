@@ -16,13 +16,10 @@
 
 ## 3. 关键架构设计与“大坑”防范（重要！）
 
-### 3.1 FreeRTOS 静态库与链接器陷阱
-- **现状**: FreeRTOS 源码与芯片启动文件 (`startup_mspm0g350x_gcc.c`) 被作为静态库 `third_party_lib` 编译。
-- **大坑警告**: 由于 FreeRTOS 的心跳 (`SysTick_Handler`) 和上下文切换 (`SVC_Handler`, `PendSV_Handler`) 是**硬件中断函数**，应用层不会显示调用。如果使用常规静态库链接，GCC 链接器 `--gc-sections` 优化规则会**彻底剔除这些中断向量**，导致启动调度器后系统立刻挂死！
-- **解决方案**: 在 `CMakeLists.txt` 中，链接 `third_party_lib` 时**必须**使用强制保留所有符号的包裹参数：
-  ```cmake
-  target_link_libraries(${PROJECT_NAME}.elf PRIVATE -Wl,--whole-archive third_party_lib -Wl,--no-whole-archive)
-  ```
+### 3.1 FreeRTOS 静态库与链接器精确裁剪 (极限 Flash 优化)
+- **原理**: 由于 FreeRTOS 的心跳 (`SysTick_Handler`) 和上下文切换 (`SVC_Handler`, `PendSV_Handler`) 是**硬件中断函数**，应用层不会显示调用。常规链接可能会导致 GCC 的 `--gc-sections` 优化剔除这些中断向量。
+- **曾用解法**: 以前为了防止被剔除，在链接时使用了暴力的 `-Wl,--whole-archive` 参数，但这导致整个库里所有未使用的 FreeRTOS 组件（如队列、定时器等）全部被塞进 Flash 中，造成严重的空间浪费。
+- **现行最优解法**: 现已将 `startup_mspm0g350x_gcc.c` 从库代码中剥离，直接加入 `APP_SOURCES` 作为主程序的一部分！由于中断向量表位于主程序中，链接器会顺藤摸瓜，精确且**仅抓取**真正需要的 FreeRTOS 库文件。去除了 `--whole-archive` 捆绑，Flash 尺寸得以大幅下降！
 
 ### 3.2 异步非阻塞日志框架 (Async Logger)
 - **现状**: 系统自带专业彩色异步日志系统（见 `src/logger.c` 及 `include/logger.h`）。

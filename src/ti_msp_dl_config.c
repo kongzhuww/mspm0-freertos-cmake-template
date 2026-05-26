@@ -54,11 +54,9 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     /* Module-Specific Initializations*/
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_TIM_delay_us_init();
-    SYSCFG_DL_TIM_delay_ms_init();
     SYSCFG_DL_UART_DEBUG_init();
     /* Ensure backup structures have no valid state */
 	gTIM_delay_usBackup.backupRdy 	= false;
-	gTIM_delay_msBackup.backupRdy 	= false;
 
 
 }
@@ -71,7 +69,6 @@ SYSCONFIG_WEAK bool SYSCFG_DL_saveConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerA_saveConfiguration(TIM_delay_us_INST, &gTIM_delay_usBackup);
-	retStatus &= DL_TimerA_saveConfiguration(TIM_delay_ms_INST, &gTIM_delay_msBackup);
 
     return retStatus;
 }
@@ -82,7 +79,6 @@ SYSCONFIG_WEAK bool SYSCFG_DL_restoreConfiguration(void)
     bool retStatus = true;
 
 	retStatus &= DL_TimerA_restoreConfiguration(TIM_delay_us_INST, &gTIM_delay_usBackup, false);
-	retStatus &= DL_TimerA_restoreConfiguration(TIM_delay_ms_INST, &gTIM_delay_msBackup, false);
 
     return retStatus;
 }
@@ -92,13 +88,11 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOA);
     DL_GPIO_reset(GPIOB);
     DL_TimerA_reset(TIM_delay_us_INST);
-    DL_TimerA_reset(TIM_delay_ms_INST);
     DL_UART_Main_reset(UART_DEBUG_INST);
 
     DL_GPIO_enablePower(GPIOA);
     DL_GPIO_enablePower(GPIOB);
     DL_TimerA_enablePower(TIM_delay_us_INST);
-    DL_TimerA_enablePower(TIM_delay_ms_INST);
     DL_UART_Main_enablePower(UART_DEBUG_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
@@ -193,42 +187,6 @@ SYSCONFIG_WEAK void SYSCFG_DL_TIM_delay_us_init(void) {
     DL_TimerA_initTimerMode(TIM_delay_us_INST,
         (DL_TimerA_TimerConfig *) &gTIM_delay_usTimerConfig);
     DL_TimerA_enableClock(TIM_delay_us_INST);
-
-
-
-
-
-}
-
-/*
- * Timer clock configuration to be sourced by MFCLK /  (500000 Hz)
- * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
- *   2000 Hz = 500000 Hz / (8 * (249 + 1))
- */
-static const DL_TimerA_ClockConfig gTIM_delay_msClockConfig = {
-    .clockSel    = DL_TIMER_CLOCK_MFCLK,
-    .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
-    .prescale    = 249U,
-};
-
-/*
- * Timer load value (where the counter starts from) is calculated as (timerPeriod * timerClockFreq) - 1
- * TIM_delay_ms_INST_LOAD_VALUE = (1 ms * 2000 Hz) - 1
- */
-static const DL_TimerA_TimerConfig gTIM_delay_msTimerConfig = {
-    .period     = TIM_delay_ms_INST_LOAD_VALUE,
-    .timerMode  = DL_TIMER_TIMER_MODE_ONE_SHOT,
-    .startTimer = DL_TIMER_STOP,
-};
-
-SYSCONFIG_WEAK void SYSCFG_DL_TIM_delay_ms_init(void) {
-
-    DL_TimerA_setClockConfig(TIM_delay_ms_INST,
-        (DL_TimerA_ClockConfig *) &gTIM_delay_msClockConfig);
-
-    DL_TimerA_initTimerMode(TIM_delay_ms_INST,
-        (DL_TimerA_TimerConfig *) &gTIM_delay_msTimerConfig);
-    DL_TimerA_enableClock(TIM_delay_ms_INST);
 
 
 
