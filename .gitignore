@@ -8,6 +8,7 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 *.cmake
+!gcc-arm-none-eabi.cmake
 !.vscode/tasks.json
 !.vscode/launch.json
 

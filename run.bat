@@ -30,7 +30,7 @@ exit /b %errorlevel%
 
 :test
 echo [AI-Script] Running host unit tests...
-cmake -B build-test
+cmake -G Ninja -B build-test
 if %errorlevel% neq 0 exit /b %errorlevel%
 cmake --build build-test
 if %errorlevel% neq 0 exit /b %errorlevel%

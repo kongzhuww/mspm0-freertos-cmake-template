@@ -1,5 +1,10 @@
 # MSPM0G3507 FreeRTOS CMake 模板仓库
 
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Build](https://img.shields.io/badge/Build-CMake%20%7C%20Ninja-success)
+![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-orange)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
+
 > **🤖 AI 助手接手指引**：如果您是即将接手本项目的 AI 助手，请**立即查阅**位于 [contexts/context.md](contexts/context.md) 的专属核心上下文文档，以掌握项目深层架构、中断链接规则和异步日志设计。
 
 这是一个专为德州仪器 (TI) MSPM0G3507 微控制器打造的**现代、高效、高工程标准**的 C 语言开发模板。本项目不仅完全脱离了传统 IDE（如 Keil）的束缚，通过 CMake 实现了跨平台构建，更重要的是引入了高级软件工程的实践（硬件与业务逻辑解耦、单元测试、Linter）。
@@ -23,10 +28,15 @@ MSPM0_Template/
 ├── include/            # 头文件
 ├── third_party/        # 第三方依赖库 (TI DriverLib SDK, FreeRTOS, 启动与链接脚本)
 ├── test/               # PC 端本地单元测试代码 (包含 Unity 框架)
+├── contexts/           # 🤖 面向 AI 的核心架构上下文与防坑指南
+├── build/              # MCU 交叉编译输出目录 (自动生成)
+├── build-test/         # PC 端测试用例编译输出目录 (自动生成)
 ├── .vscode/            # VS Code 一键编译与烧录任务 (tasks.json)
 ├── .clang-format       # 统一代码格式化规范
 ├── CMakeLists.txt      # 现代 CMake 主构建脚本
-└── gcc-arm-none-eabi.cmake # 交叉编译工具链配置文件
+├── gcc-arm-none-eabi.cmake # 交叉编译工具链配置文件
+├── Makefile            # 跨平台 (Linux/macOS) 一键自动化脚本
+└── run.bat             # 跨平台 (Windows) 一键自动化脚本
 ```
 
 ## 🛠️ 环境依赖
@@ -41,10 +51,17 @@ MSPM0_Template/
 
 ### 1. 编译固件
 在项目根目录下，直接执行我们专门封装的极简构建脚本即可完成交叉编译：
+
+**Windows 环境:**
 ```bash
 .\run.bat build
 ```
-*(底层实际执行了 `cmake -DCMAKE_TOOLCHAIN_FILE=...` 和 `cmake --build`)*
+
+**Linux/macOS 环境:**
+```bash
+make build
+```
+*(底层实际执行了 `cmake -DCMAKE_TOOLCHAIN_FILE=...` 和 `cmake -G Ninja --build`)*
 
 编译成功后，在 `build/` 目录下将生成目标固件。
 
@@ -54,18 +71,33 @@ MSPM0_Template/
 - 或者在命令行直接运行一键烧录脚本：
   ```bash
   .\run.bat flash
+  # 或在 Linux/macOS 下使用: make flash
   ```
   *(脚本会自动调用 OpenOCD 并执行 verify, reset 操作)*
+
+### 3. 一键清理
+如果需要清除所有编译缓存，可执行：
+```bash
+.\run.bat clean
+# 或在 Linux/macOS 下使用: make clean
+```
 
 ## 🧪 PC 端单元测试 (无需硬件)
 
 本模板实现了完美的逻辑解耦。您的核心逻辑代码 `app_control.c` 可以直接在宿主机（如您的 Windows 电脑）上通过普通的 GCC 编译并运行测试用例。
 
 执行极简测试指令：
+
+**Windows 环境:**
 ```bash
 .\run.bat test
 ```
-该指令会自动完成测试固件的 CMake 配置、编译并立即执行 `run_tests.exe`。
+
+**Linux/macOS 环境:**
+```bash
+make test
+```
+该指令会自动完成测试固件的 CMake 配置、编译并立即执行 `run_tests` 二进制文件。
 
 您将看到类似如下的美妙输出：
 ```text
