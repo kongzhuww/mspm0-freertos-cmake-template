@@ -27,14 +27,18 @@ static StaticTask_t logger_task_tcb;
 static void vLoggerTask(void *pvParameters)
 {
     (void)pvParameters;
-    char ch;
+    char buf[32];
+    size_t received_bytes;
     
     for (;;) {
-        // 阻塞等待流缓冲区内出现数据
-        if (xStreamBufferReceive(uart_stream_buffer, &ch, 1, portMAX_DELAY) > 0) {
-            // 等待硬件空闲并发送物理字节
-            while( DL_UART_isBusy(UART_DEBUG_INST) == true );
-            DL_UART_Main_transmitData(UART_DEBUG_INST, ch);
+        // 阻塞等待流缓冲区内出现数据，批量提取以降低 RTOS API 调度开销
+        received_bytes = xStreamBufferReceive(uart_stream_buffer, buf, sizeof(buf), portMAX_DELAY);
+        if (received_bytes > 0) {
+            for (size_t i = 0; i < received_bytes; i++) {
+                // 等待硬件空闲并发送物理字节
+                while( DL_UART_isBusy(UART_DEBUG_INST) == true );
+                DL_UART_Main_transmitData(UART_DEBUG_INST, buf[i]);
+            }
         }
     }
 }

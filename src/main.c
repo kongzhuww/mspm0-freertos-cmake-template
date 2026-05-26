@@ -85,61 +85,32 @@ static void vLedBlinkTask(void *pvParameters)
 {
     /* 防止编译器警告 */
     (void) pvParameters;
-    
     // 初始化解耦控制器
     app_context_t app_ctx;
     app_control_init(&app_ctx);
     
-    // 记录上一次按键状态（1 表示未按下，0 表示按下）
-    uint8_t last_key_state = 1;
-    
-    /* 无限循环 */
+    /* 无限循环：极简的 20ms 轮询采样天然防抖 */
     for (;;)
     {
-        // 读取按键 PB21 的电平状态
+        // 1. 读取底层硬件状态
         uint32_t pin_val = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
-        uint8_t current_key_state = (pin_val & KEY_B21_PIN) ? 1 : 0;
+        app_key_state_e current_key_state = (pin_val & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
         
-        // 检测按键按下边缘（下降沿：从 1 变为 0）
-        if (last_key_state == 1 && current_key_state == 0)
+        // 2. 送入纯逻辑状态机（内部自动处理边缘检测）
+        bool toggled = app_control_update(&app_ctx, current_key_state);
+        
+        // 3. 处理逻辑层输出
+        if (toggled || app_ctx.need_toggle)
         {
-            // 延时 20ms 进行软件消抖
-            vTaskDelay(pdMS_TO_TICKS(20));
+            /* 触发物理层翻转LED状态 */
+            board_led_toggle();
             
-            // 重新读取确认
-            pin_val = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
-            current_key_state = (pin_val & KEY_B21_PIN) ? 1 : 0;
-            
-            if (current_key_state == 0)
-            {
-                /* 将输入通过纯逻辑状态机更新 */
-                bool toggled = app_control_update(&app_ctx, APP_KEY_PRESSED);
-                
-                if (toggled || app_ctx.need_toggle)
-                {
-                    /* 触发物理层翻转LED状态 */
-                    board_led_toggle();
-                    
-                    // 打印按键触发日志
-                    led_state_e led_state = get_board_led_state();
-                    LOG_INFO("KEY (PB21) Pressed! LED (PB14) toggled to %s", (led_state == LED_ON) ? "ON" : "OFF");
-                }
-                
-                /* 等待按键释放，防止连续触发 */
-                while ((DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN) & KEY_B21_PIN) == 0)
-                {
-                    vTaskDelay(pdMS_TO_TICKS(10)); // 避免死等占用CPU，主动让出时间片
-                }
-                
-                // 按键释放，通知状态机更新状态
-                app_control_update(&app_ctx, APP_KEY_RELEASED);
-                current_key_state = 1;
-            }
+            // 打印按键触发日志
+            led_state_e led_state = get_board_led_state();
+            LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (led_state == LED_ON) ? "ON" : "OFF");
         }
         
-        last_key_state = current_key_state;
-        
-        // 轮询检查周期 20ms
+        // 4. 释放 CPU 并设定 20ms 采样周期
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }

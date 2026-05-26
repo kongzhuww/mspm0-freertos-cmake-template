@@ -52,7 +52,6 @@ if(CMAKE_CROSSCOMPILING)
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/src/tasks.c
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/src/timers.c
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/portable/GCC/ARM_CM0/port.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/portable/MemMang/heap_4.c
     )
 
     # 静态库路径和链接
