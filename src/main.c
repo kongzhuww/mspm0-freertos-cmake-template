@@ -100,7 +100,7 @@ static void vLedBlinkTask(void *pvParameters)
         bool toggled = app_control_update(&app_ctx, current_key_state);
         
         // 3. 处理逻辑层输出
-        if (toggled || app_ctx.need_toggle)
+        if (toggled)
         {
             /* 物理层绝对服从逻辑层状态（不使用相对翻转） */
             if (app_ctx.led_state == APP_LED_ON) {

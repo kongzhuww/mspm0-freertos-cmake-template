@@ -6,7 +6,6 @@ void app_control_init(app_context_t *ctx)
     if (ctx != NULL) {
         ctx->led_state = APP_LED_OFF;
         ctx->last_key_state = APP_KEY_RELEASED;
-        ctx->need_toggle = false;
     }
 }
 
@@ -17,7 +16,6 @@ bool app_control_update(app_context_t *ctx, app_key_state_e key_state)
     }
 
     bool toggled = false;
-    ctx->need_toggle = false;
 
     // 状态转换：检测按键按下边缘（下降沿：1 -> 0）
     if (ctx->last_key_state == APP_KEY_RELEASED && key_state == APP_KEY_PRESSED) {
@@ -27,7 +25,6 @@ bool app_control_update(app_context_t *ctx, app_key_state_e key_state)
         } else {
             ctx->led_state = APP_LED_OFF;
         }
-        ctx->need_toggle = true;
         toggled = true;
     }
 

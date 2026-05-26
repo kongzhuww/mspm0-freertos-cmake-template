@@ -20,7 +20,6 @@ typedef enum {
 typedef struct {
     app_led_state_e led_state;  // LED 当前状态
     app_key_state_e last_key_state; // 上一次读取的按键状态
-    bool need_toggle;           // 指示是否需要物理层翻转 LED
 } app_context_t;
 
 /**
