@@ -202,7 +202,13 @@ void __attribute__((weak))
 vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 #endif
 {
-    // 默认实现：检测到栈溢出时进入无限循环
+    // [致命错误护航] 发生栈溢出时，RTOS 环境可能已完全崩塌，绝对不能调用任何 RTOS API。
+    // 使用最底层的纯硬件死等轮询方式，把导致崩溃的任务名称“遗言”发出去。
+    debug_uart_send_string("\r\n[FATAL ERROR] FreeRTOS Stack Overflow detected in task: ");
+    debug_uart_send_string(pcTaskName);
+    debug_uart_send_string("\r\nSYSTEM HALTED.\r\n");
+
+    // 默认实现：检测到栈溢出时进入无限循环，卡死在此处以便连接 DAPLink 观察 Call Stack
     while (1) {
     }
 }
