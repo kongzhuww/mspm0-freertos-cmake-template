@@ -8,7 +8,7 @@
             "args": [
                 "-NoProfile",
                 "-Command",
-                "Write-Host '==> 开始配置本地测试环境' -ForegroundColor Cyan; cmake -G Ninja -B build_host; if (-not $?) { Write-Host '[失败] 本地环境配置失败' -ForegroundColor Red; exit 1 }; Write-Host '==> 开始编译本地测试' -ForegroundColor Cyan; cmake --build build_host; if ($?) { Write-Host '[成功] 本地测试编译成功!' -ForegroundColor Green } else { Write-Host '[失败] 本地测试编译失败' -ForegroundColor Red; exit 1 }"
+                "Write-Host '==> 开始配置本地测试环境' -ForegroundColor Cyan; cmake -G Ninja -B build_test; if (-not $?) { Write-Host '[失败] 本地环境配置失败' -ForegroundColor Red; exit 1 }; Write-Host '==> 开始编译本地测试' -ForegroundColor Cyan; cmake --build build_test; if ($?) { Write-Host '[成功] 本地测试编译成功!' -ForegroundColor Green } else { Write-Host '[失败] 本地测试编译失败' -ForegroundColor Red; exit 1 }"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"

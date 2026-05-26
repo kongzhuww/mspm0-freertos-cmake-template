@@ -34,7 +34,7 @@ MSPM0_Template/
 ├── test/               # PC 端本地单元测试代码 (包含 Unity 框架)
 ├── contexts/           # 🤖 面向 AI 的核心架构上下文与防坑指南
 ├── build/              # MCU 交叉编译输出目录 (自动生成)
-├── build_host/         # PC 端测试用例编译输出目录 (自动生成)
+├── build_test/         # PC 端测试用例编译输出目录 (自动生成)
 ├── .vscode/            # VS Code 一键编译与烧录任务 (tasks.json)
 ├── .clang-format       # 统一代码格式化规范
 ├── CMakeLists.txt      # 现代 CMake 主构建脚本

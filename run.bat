@@ -29,17 +29,17 @@ openocd -f interface/cmsis-dap.cfg -c "adapter speed 2000" -f target/ti_mspm0.cf
 exit /b %errorlevel%
 
 :test
-echo [AI-Script] Running host unit tests...
-cmake -G Ninja -B build_host
+echo [AI-Script] Running PC unit tests...
+cmake -G Ninja -B build_test
 if %errorlevel% neq 0 exit /b %errorlevel%
-cmake --build build_host
+cmake --build build_test
 if %errorlevel% neq 0 exit /b %errorlevel%
-.\build_host\run_tests.exe
+.\build_test\run_tests.exe
 exit /b %errorlevel%
 
 :clean
 echo [AI-Script] Cleaning build directories...
 if exist build rmdir /s /q build
-if exist build_host rmdir /s /q build_host
+if exist build_test rmdir /s /q build_test
 echo Done.
 exit /b 0

@@ -94,7 +94,7 @@ if(CMAKE_CROSSCOMPILING)
     )
 else()
     # --------- 本机编译及测试 ---------
-    message(STATUS "Host test build mode")
+    message(STATUS "PC test build mode")
     
     # 启用测试
     enable_testing()

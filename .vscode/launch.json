@@ -5,7 +5,7 @@
             "name": "(gdb) 调试本地测试",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build_host/run_tests.exe",
+            "program": "${workspaceFolder}/build_test/run_tests.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
