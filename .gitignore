@@ -1,6 +1,8 @@
 # CMake and build outputs
 build/
 build-test/
+build_host/
+temp_build/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
