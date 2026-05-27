@@ -52,6 +52,7 @@
 /* 静态任务控制块和栈空间 */
 static StaticTask_t led_task_tcb;
 static StackType_t led_task_stack[LED_TASK_STACK_SIZE];
+static TaskHandle_t led_task_handle = NULL;
 
 /* 任务函数原型 */
 static void vLedBlinkTask(void *pvParameters);
@@ -64,7 +65,7 @@ int main(void)
     logger_init(); // 初始化异步日志引擎
     
     /* 创建静态任务 - LED闪烁任务 */
-    xTaskCreateStatic(
+    led_task_handle = xTaskCreateStatic(
         vLedBlinkTask,              /* 任务函数 */
         "LedBlink",                 /* 任务名称 */
         LED_TASK_STACK_SIZE,        /* 栈深度 */
@@ -89,9 +90,11 @@ static void vLedBlinkTask(void *pvParameters)
     app_context_t app_ctx;
     app_control_init(&app_ctx);
     
-    /* 无限循环：极简的 20ms 轮询采样天然防抖 */
     for (;;)
     {
+        // 等待来自中断的任务通知，彻底放弃 20ms 轮询，实现微安级休眠
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        
         // 1. 读取底层硬件状态
         uint32_t pin_val = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
         app_key_state_e current_key_state = (pin_val & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
@@ -112,9 +115,26 @@ static void vLedBlinkTask(void *pvParameters)
             // 打印按键触发日志
             LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (app_ctx.led_state == APP_LED_ON) ? "ON" : "OFF");
         }
+    }
+}
+
+/* GPIOB (KEY_B21 所在组) 中断服务函数 */
+void GROUP1_IRQHandler(void)
+{
+    // 获取 GPIOB 的中断状态
+    uint32_t pending = DL_GPIO_getEnabledInterruptStatus(GPIOB, KEY_B21_PIN);
+    
+    if (pending & KEY_B21_PIN)
+    {
+        // 清除中断标志
+        DL_GPIO_clearInterruptStatus(GPIOB, KEY_B21_PIN);
         
-        // 4. 释放 CPU 并设定 20ms 采样周期
-        vTaskDelay(pdMS_TO_TICKS(20));
+        // 通知 LED 任务去处理电平变化
+        if (led_task_handle != NULL) {
+            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+            vTaskNotifyGiveFromISR(led_task_handle, &xHigherPriorityTaskWoken);
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        }
     }
 }
 

@@ -118,8 +118,12 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
 
     DL_GPIO_clearPins(GPIOB, LED_B14_PIN);
     DL_GPIO_enableOutput(GPIOB, LED_B14_PIN);
-    DL_GPIO_setUpperPinsPolarity(GPIOB, DL_GPIO_PIN_21_EDGE_RISE);
+    DL_GPIO_setUpperPinsPolarity(GPIOB, DL_GPIO_PIN_21_EDGE_RISE_FALL);
 
+    DL_GPIO_clearInterruptStatus(GPIOB, KEY_B21_PIN);
+    DL_GPIO_enableInterrupt(GPIOB, KEY_B21_PIN);
+    NVIC_SetPriority(GPIOB_INT_IRQn, 2);
+    NVIC_EnableIRQ(GPIOB_INT_IRQn);
 }
 
 
