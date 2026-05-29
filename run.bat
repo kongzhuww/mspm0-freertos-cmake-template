@@ -24,8 +24,8 @@ cmake --build build
 exit /b %errorlevel%
 
 :flash
-echo [AI-Script] Flashing firmware to MSPM0...
-openocd -f interface/cmsis-dap.cfg -c "adapter speed 2000" -f target/ti_mspm0.cfg -c "program build/MSPM0G3507_FreeRTOS.elf verify reset exit"
+echo [AI-Script] Flashing firmware to MSPM0... (Fast Mode)
+openocd -f interface/cmsis-dap.cfg -c "adapter speed 10000" -f target/ti_mspm0.cfg -c "program build/MSPM0G3507_FreeRTOS.elf reset exit"
 exit /b %errorlevel%
 
 :test

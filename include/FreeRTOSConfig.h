@@ -86,8 +86,14 @@
 
 /* 启用或禁用功能的常量 */
 #define configUSE_MUTEXES 1                            // 启用互斥信号量
-#define configUSE_TICKLESS_IDLE 0                     // 启用无滴答空闲模式（低功耗）
+#define configUSE_TICKLESS_IDLE 1                     // 启用无滴答空闲模式（低功耗）
 #define configUSE_APPLICATION_TASK_TAG 0 /* POSIX/pthread需要 */
+
+/* 当准备进入 Tickless Idle 之前，允许应用程序介入干预休眠时间 */
+#ifndef __ASSEMBLER__
+extern void vPreSleepProcessing(unsigned long *ulExpectedIdleTime);
+#define configPRE_SLEEP_PROCESSING( x ) vPreSleepProcessing( (unsigned long *)&x )
+#endif
 /*
 	任务标签的核心用途是在运行时识别或区分不同任务，特别是在无法直接获取任务句柄的场景（如中断服务函数）中。
 	不过，是否启用这个功能取决于您的具体需求：如果您的应用不需要通过标签值来识别任务，完全可以不启用。

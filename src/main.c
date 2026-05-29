@@ -153,9 +153,20 @@ void GROUP1_IRQHandler(void)
 // 当 configUSE_IDLE_HOOK 设为 1 时，系统空闲会调用此钩子
 void vApplicationIdleHook(void)
 {
-    // 让 CPU 进入睡眠模式，直到下一次中断（如 SysTick 或按键等）唤醒
-    // 功耗瞬间从毫安级降至微安级！
+    // 注意：开启 Tickless Idle (configUSE_TICKLESS_IDLE=1) 后，FreeRTOS 的
+    // vPortSuppressTicksAndSleep 会独立接管深睡逻辑，此处的 __WFI() 仅作为保底
     __WFI();
+}
+
+// 预休眠处理钩子：在系统即将进入 Tickless Idle 深睡前自动被 FreeRTOS 调用
+void vPreSleepProcessing(unsigned long *ulExpectedIdleTime)
+{
+    // 硬件级雷达扫描：如果检测到连接了调试器(DAPLink)，强行放弃深度休眠
+    // Cortex-M 系列通用 DHCSR 寄存器地址为 0xE000EDF0，最低位 (bit 0) 为 C_DEBUGEN
+    volatile uint32_t *dhcsr = (volatile uint32_t *)0xE000EDF0;
+    if ((*dhcsr & 1) != 0) {
+        *ulExpectedIdleTime = 0; // 预期休眠时间清零，FreeRTOS 将中止休眠流程，保证烧录/调试畅通无阻
+    }
 }
 
 /*-----------------------------------------------------------*/

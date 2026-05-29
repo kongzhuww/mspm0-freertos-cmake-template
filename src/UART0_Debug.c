@@ -70,8 +70,45 @@ int _write(int file, char *ptr, int len)
             xStreamBufferSend(uart_stream_buffer, &ptr[i], 1, portMAX_DELAY);
         }
         xSemaphoreGive(logger_mutex);
+        
+        // 唤醒硬件 TX 空闲中断，让硬件自动搬运数据
+        DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
     }
     
     return len;
+}
+
+// 串口中断服务函数，专门接管底层的物理发送任务
+void UART0_IRQHandler(void)
+{
+    switch (DL_UART_Main_getPendingInterrupt(UART_DEBUG_INST)) {
+        case DL_UART_MAIN_IIDX_TX:
+        {
+            char c;
+            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+            
+            // 如果 StreamBuffer 尚未初始化，直接退出
+            if (uart_stream_buffer == NULL) {
+                DL_UART_Main_disableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
+                break;
+            }
+            
+            // 从流缓冲区中非阻塞提取 1 个字符
+            size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &xHigherPriorityTaskWoken);
+            
+            if (bytes > 0) {
+                // 有数据，推入物理发送寄存器（这会自动触发下一次 TX 中断）
+                DL_UART_Main_transmitData(UART_DEBUG_INST, c);
+            } else {
+                // 没有数据了，关闭 TX 中断，避免死循环触发，此时 CPU 可进入 __WFI()
+                DL_UART_Main_disableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
+            }
+            
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            break;
+        }
+        default:
+            break;
+    }
 }
 #endif
