@@ -144,11 +144,6 @@ SECTIONS
          . = ALIGN(0x8);
     } > REGION_ARM_EXTAB AT> REGION_ARM_EXTAB
 
-    /*
-     * 将 Flash 地址计数器对齐到 1KB 扇区边界 (0x400)，
-     * 消除 OpenOCD 烧录时 "Adding extra erase range" 的警告。
-     */
-    . = ALIGN(0x400);
     __etext = .;
 
     .data : {
