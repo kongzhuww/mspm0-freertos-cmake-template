@@ -32,16 +32,43 @@ void debug_uart_send_string(char* str)
 extern StreamBufferHandle_t uart_stream_buffer;
 extern SemaphoreHandle_t logger_mutex;
 
+/*
+ * [核心防死锁标志] 追踪 TX 中断链是否正在运行。
+ * true  = ISR 正在以 "发送→中断→发送→中断..." 的接力方式排空缓冲区
+ * false = ISR 已因缓冲区排空而自行停机，需要外部手动 "起搏" 才能重启
+ */
+static volatile bool uart_tx_active = false;
+
+/*
+ * [原子起搏器] 确保 TX 中断链正在运行。
+ * 如果链已停止且缓冲区有数据，则从缓冲区取出第一个字节直接塞给硬件寄存器，
+ * 启动整条发送链。整个操作在关中断的临界区内完成，杜绝一切竞态。
+ * 必须从任务上下文调用。
+ */
+static void uart_tx_ensure_draining(void)
+{
+    taskENTER_CRITICAL();
+    if (!uart_tx_active) {
+        char c;
+        BaseType_t dummy = pdFALSE;
+        // 在临界区内使用 FromISR 版本是安全的（中断已关，等价于 ISR 上下文）
+        size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &dummy);
+        if (bytes > 0) {
+            uart_tx_active = true;
+            DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
+            DL_UART_Main_transmitData(UART_DEBUG_INST, c);
+        }
+    }
+    taskEXIT_CRITICAL();
+}
+
 // 适配 GCC 环境的 printf 重定向
 int _write(int file, char *ptr, int len)
 {
     // [致命防坑] 判断当前是否处于中断上下文 (ISR)。
-    // 在 Cortex-M0+ 中，读取 SCB->ICSR (Interrupt Control and State Register) 寄存器
-    // 的最低 6 位 (VECTACTIVE) 即可判断。如果非零，说明正在中断处理函数中。
+    // Cortex-M0+ 读取 SCB->ICSR 的 VECTACTIVE 位域，非零说明在 ISR 中。
     // 中断中严禁调用带阻塞属性的 FreeRTOS API，否则秒死锁/HardFault！
     if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0) {
-        // 如果实在想看中断里的打印，可以放开这里的底层硬件轮询发送。
-        // 但为了保证中断不被拖慢，直接丢弃是最安全的做法。
         return len;
     }
 
@@ -59,22 +86,26 @@ int _write(int file, char *ptr, int len)
         return len;
     }
 
-    // 异步日志引擎已启动：受互斥锁保护，将数据直接推入环形内存，极其快速
+    // 异步日志引擎已启动：受互斥锁保护，将数据推入环形缓冲区
     if (xSemaphoreTake(logger_mutex, portMAX_DELAY) == pdTRUE) {
         int i;
         for (i = 0; i < len; i++) {
             if (ptr[i] == '\n') {
                 char cr = '\r';
+                // [关键] 在每次可能阻塞的 Send 之前，确保 TX 链在跑！
+                // 否则缓冲区满时任务阻塞，而 ISR 已停机 → 永久死锁
+                uart_tx_ensure_draining();
                 xStreamBufferSend(uart_stream_buffer, &cr, 1, portMAX_DELAY);
             }
+            uart_tx_ensure_draining();
             xStreamBufferSend(uart_stream_buffer, &ptr[i], 1, portMAX_DELAY);
         }
         xSemaphoreGive(logger_mutex);
-        
-        // 唤醒硬件 TX 空闲中断，让硬件自动搬运数据
-        DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
     }
-    
+
+    // 最终保底起搏：确保刚推入的最后一批数据也能被排走
+    uart_tx_ensure_draining();
+
     return len;
 }
 
@@ -86,24 +117,26 @@ void UART0_IRQHandler(void)
         {
             char c;
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-            
-            // 如果 StreamBuffer 尚未初始化，直接退出
+
+            // 如果 StreamBuffer 尚未初始化，直接停机
             if (uart_stream_buffer == NULL) {
                 DL_UART_Main_disableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
+                uart_tx_active = false;
                 break;
             }
-            
+
             // 从流缓冲区中非阻塞提取 1 个字符
             size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &xHigherPriorityTaskWoken);
-            
+
             if (bytes > 0) {
-                // 有数据，推入物理发送寄存器（这会自动触发下一次 TX 中断）
+                // 有数据，推入物理发送寄存器（字节发完后硬件自动触发下一次 TX 中断）
                 DL_UART_Main_transmitData(UART_DEBUG_INST, c);
             } else {
-                // 没有数据了，关闭 TX 中断，避免死循环触发，此时 CPU 可进入 __WFI()
+                // 缓冲区已空，关闭 TX 中断停机，标记链已死，等待 ensure_draining 来重启
                 DL_UART_Main_disableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
+                uart_tx_active = false;
             }
-            
+
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             break;
         }

@@ -46,7 +46,7 @@
 #include "app_control.h"
 
 /* 定义任务栈大小和优先级 */
-#define LED_TASK_STACK_SIZE      256
+#define LED_TASK_STACK_SIZE      1024
 #define LED_TASK_PRIORITY        1
 
 /* 静态任务控制块和栈空间 */
