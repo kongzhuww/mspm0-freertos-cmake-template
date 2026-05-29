@@ -19,7 +19,7 @@
 
 /**
  * @brief 初始化异步日志系统
- * 创建 StreamBuffer、互斥锁并启动后台打印任务。
+ * 创建 StreamBuffer、互斥锁，并使能 UART TX 中断以实现中断驱动发送。
  */
 void logger_init(void);
 

@@ -13,11 +13,10 @@ void debug_uart_send_char(char ch)
 	DL_UART_Main_transmitData(UART_DEBUG_INST, ch);
 }
 
-//发送字符串
+// 阻塞发送字符串（仅供栈溢出等致命错误场景使用）
 void debug_uart_send_string(char* str)
 {
-	while(*str!=0&&str!=0)
-	{
+	while (*str != '\0') {
 		debug_uart_send_char(*str++);
 	}
 }

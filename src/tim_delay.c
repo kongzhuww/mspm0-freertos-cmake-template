@@ -18,6 +18,4 @@ void delay_us(uint16_t us)
     {
         // 空循环，持续检查计数器值
     }
-     // 停止定时器（单次模式会自动停止，但显式停止更安全）
-     //DL_TimerA_stopCounter(TIM_delay_us_INST);             // 停止定时器
 }
