@@ -17,7 +17,7 @@ void debug_uart_init(void);
 void debug_uart_send_char(char ch);
 
 /** @brief 阻塞发送字符串（仅供栈溢出等致命错误场景使用） */
-void debug_uart_send_string(char* str);
+void debug_uart_send_string(const char* str);
 
 #ifdef __cplusplus
 }

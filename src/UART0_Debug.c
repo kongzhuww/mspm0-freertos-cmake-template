@@ -14,7 +14,7 @@ void debug_uart_send_char(char ch)
 }
 
 // 阻塞发送字符串（仅供栈溢出等致命错误场景使用）
-void debug_uart_send_string(char* str)
+void debug_uart_send_string(const char* str)
 {
 	while (*str != '\0') {
 		debug_uart_send_char(*str++);
@@ -42,20 +42,17 @@ static volatile bool uart_tx_active = false;
  * [原子起搏器] 确保 TX 中断链正在运行。
  * 如果链已停止且缓冲区有数据，则从缓冲区取出第一个字节直接塞给硬件寄存器，
  * 启动整条发送链。整个操作在关中断的临界区内完成，杜绝一切竞态。
+ * 如果链已停止且缓冲区有数据，则直接使能 TX 中断启动整条发送链。
+ * 整个操作在关中断的临界区内完成，杜绝一切竞态。
  * 必须从任务上下文调用。
  */
 static void uart_tx_ensure_draining(void)
 {
     taskENTER_CRITICAL();
     if (!uart_tx_active) {
-        char c;
-        BaseType_t dummy = pdFALSE;
-        // 在临界区内使用 FromISR 版本是安全的（中断已关，等价于 ISR 上下文）
-        size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &dummy);
-        if (bytes > 0) {
+        if (uart_stream_buffer != NULL && !xStreamBufferIsEmpty(uart_stream_buffer)) {
             uart_tx_active = true;
             DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
-            DL_UART_Main_transmitData(UART_DEBUG_INST, c);
         }
     }
     taskEXIT_CRITICAL();
@@ -71,8 +68,10 @@ int _write(int file, char *ptr, int len)
         return len;
     }
 
-    // 如果异步日志引擎还未初始化，回退到原生的硬件阻塞发送
-    if (uart_stream_buffer == NULL || logger_mutex == NULL) {
+    // 如果异步日志引擎还未初始化，或者调度器未运行/被挂起，或者当前处于临界区（关闭了全局中断），回退到原生的硬件阻塞发送
+    if (uart_stream_buffer == NULL || logger_mutex == NULL || 
+        xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || 
+        __get_PRIMASK() != 0) {
         int i;
         for (i = 0; i < len; i++) {
             if (ptr[i] == '\n') {
@@ -87,18 +86,70 @@ int _write(int file, char *ptr, int len)
 
     // 异步日志引擎已启动：受互斥锁保护，将数据推入环形缓冲区
     if (xSemaphoreTake(logger_mutex, portMAX_DELAY) == pdTRUE) {
+        // 使用临时缓冲区进行 \n → \r\n 展开，减少逐字节临界区进出的开销
+        char expand_buf[128];
+        int buf_pos = 0;
         int i;
+
         for (i = 0; i < len; i++) {
             if (ptr[i] == '\n') {
-                char cr = '\r';
-                // [关键] 在每次可能阻塞的 Send 之前，确保 TX 链在跑！
-                // 否则缓冲区满时任务阻塞，而 ISR 已停机 → 永久死锁
-                uart_tx_ensure_draining();
-                xStreamBufferSend(uart_stream_buffer, &cr, 1, portMAX_DELAY);
+                expand_buf[buf_pos++] = '\r';
             }
-            uart_tx_ensure_draining();
-            xStreamBufferSend(uart_stream_buffer, &ptr[i], 1, portMAX_DELAY);
+            expand_buf[buf_pos++] = ptr[i];
+
+            // 缓冲区接近满时（预留 2 字节给可能展开的 \r\n，保障边界安全），批量刷入 StreamBuffer
+            if (buf_pos >= (int)(sizeof(expand_buf) - 2)) {
+                uart_tx_ensure_draining();
+                size_t sent = 0;
+                int retries = 5;
+                while (sent < (size_t)buf_pos) {
+                    // 使用短超时代替 portMAX_DELAY，避免 ISR 停机导致的永久阻塞
+                    size_t n = xStreamBufferSend(uart_stream_buffer, expand_buf + sent,
+                                                buf_pos - sent, pdMS_TO_TICKS(10));
+                    if (n == 0) {
+                        if (--retries <= 0) {
+                            break; // 连续超时失败，丢弃未发送数据，防挂死
+                        }
+                        // 强制断链自愈：重置 active 状态以确保能正常拉起发送链
+                        taskENTER_CRITICAL();
+                        uart_tx_active = false;
+                        taskEXIT_CRITICAL();
+                        uart_tx_ensure_draining(); // ISR 可能已停机，重新起搏
+                    } else {
+                        sent += n;
+                        retries = 5; // 成功写入，重置重试计数
+                        uart_tx_ensure_draining(); // 起搏发送链，避免因停机而出现 10ms 卡顿
+                    }
+                }
+                buf_pos = 0;
+            }
         }
+
+        // 发送剩余数据
+        if (buf_pos > 0) {
+            uart_tx_ensure_draining();
+            size_t sent = 0;
+            int retries = 5;
+            while (sent < (size_t)buf_pos) {
+                size_t n = xStreamBufferSend(uart_stream_buffer, expand_buf + sent,
+                                            buf_pos - sent, pdMS_TO_TICKS(10));
+                if (n == 0) {
+                    if (--retries <= 0) {
+                        break; // 连续超时失败，丢弃数据
+                    }
+                    // 强制断链自愈：重置 active 状态以确保能正常拉起发送链
+                    taskENTER_CRITICAL();
+                    uart_tx_active = false;
+                    taskEXIT_CRITICAL();
+                    uart_tx_ensure_draining();
+                } else {
+                    sent += n;
+                    retries = 5;
+                    uart_tx_ensure_draining(); // 起搏发送链，保证连续发送的实时性
+                }
+            }
+        }
+
         xSemaphoreGive(logger_mutex);
     }
 
@@ -116,6 +167,7 @@ void UART0_IRQHandler(void)
         {
             char c;
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+            bool data_sent = false;
 
             // 如果 StreamBuffer 尚未初始化，直接停机
             if (uart_stream_buffer == NULL) {
@@ -124,14 +176,19 @@ void UART0_IRQHandler(void)
                 break;
             }
 
-            // 从流缓冲区中非阻塞提取 1 个字符
-            size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &xHigherPriorityTaskWoken);
+            // 只要 TX FIFO 未满且环形缓冲区有数据，就持续批量提取写入
+            while (!DL_UART_Main_isTXFIFOFull(UART_DEBUG_INST)) {
+                size_t bytes = xStreamBufferReceiveFromISR(uart_stream_buffer, &c, 1, &xHigherPriorityTaskWoken);
+                if (bytes > 0) {
+                    DL_UART_Main_transmitData(UART_DEBUG_INST, c);
+                    data_sent = true;
+                } else {
+                    break;
+                }
+            }
 
-            if (bytes > 0) {
-                // 有数据，推入物理发送寄存器（字节发完后硬件自动触发下一次 TX 中断）
-                DL_UART_Main_transmitData(UART_DEBUG_INST, c);
-            } else {
-                // 缓冲区已空，关闭 TX 中断停机，标记链已死，等待 ensure_draining 来重启
+            if (!data_sent) {
+                // 缓冲区已空，没有发送任何数据，关闭 TX 中断停机，标记链已死，等待 ensure_draining 重启
                 DL_UART_Main_disableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_TX);
                 uart_tx_active = false;
             }
@@ -142,5 +199,40 @@ void UART0_IRQHandler(void)
         default:
             break;
     }
+}
+
+int _close(int file)
+{
+    (void)file;
+    return -1;
+}
+
+int _fstat(int file, void *st)
+{
+    (void)file;
+    (void)st;
+    return 0;
+}
+
+int _isatty(int file)
+{
+    (void)file;
+    return 1;
+}
+
+int _lseek(int file, int ptr, int dir)
+{
+    (void)file;
+    (void)ptr;
+    (void)dir;
+    return 0;
+}
+
+int _read(int file, char *ptr, int len)
+{
+    (void)file;
+    (void)ptr;
+    (void)len;
+    return 0;
 }
 #endif

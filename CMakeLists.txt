@@ -61,11 +61,57 @@ if(CMAKE_CROSSCOMPILING)
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/FreeRTOS/portable/GCC/ARM_CM0/port.c
     )
 
-    # 静态库路径和链接
-    set(DRIVERLIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/lib/gcc/m0p/mspm0g1x0x_g3x0x/driverlib.a")
-
     # 链接脚本
     set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/devices/mspm0g3507.lds")
+
+    # 定义 TI DriverLib 驱动源码
+    set(DRIVERLIB_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_adc12.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_aes.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_aesadv.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_common.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_comp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_crc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_crcp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_dac12.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_dma.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_flashctl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_gpamp.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_gpio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_i2c.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_iwdt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_keystorectl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_lcd.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_lfss.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_mathacl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_mcan.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_opa.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_rtc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_rtc_a.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_rtc_b.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_rtc_common.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_scratchpad.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_spi.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_tamperio.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_timer.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_timera.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_timerg.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_trng.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_uart.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_vref.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/dl_wwdt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/m0p/dl_factoryregion.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/m0p/dl_interrupt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/ti/driverlib/m0p/sysctl/dl_sysctl_mspm0g1x0x_g3x0x.c
+    )
+
+    # 将 driverlib 编译为静态库，避免预编译库丢失的问题
+    add_library(driverlib STATIC ${DRIVERLIB_SOURCES})
+    target_compile_definitions(driverlib PUBLIC -D__MSPM0G3507__)
+    target_include_directories(driverlib PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdk_source/third_party/CMSIS/Core/Include
+    )
 
     # 将第三方代码编译为静态库
     add_library(third_party_lib STATIC ${THIRD_PARTY_SOURCES})
@@ -89,7 +135,7 @@ if(CMAKE_CROSSCOMPILING)
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
     # 若需使用驱动，将组件名称（如 component_dummy_sensor）追加在下方
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE third_party_lib ${DRIVERLIB_PATH} component_dummy_sensor)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_dummy_sensor third_party_lib driverlib)
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计

@@ -86,23 +86,42 @@ static void vLedBlinkTask(void *pvParameters)
 {
     /* 防止编译器警告 */
     (void) pvParameters;
-    // 初始化解耦控制器
+    // 初始化解耦控制器（基于物理引脚上电时的真实初始状态进行初始化，避免上电误触发）
+    uint32_t init_pin = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
+    app_key_state_e init_key_state = (init_pin & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
     app_context_t app_ctx;
-    app_control_init(&app_ctx);
+    app_control_init(&app_ctx, init_key_state);
+    
+    // [修复 Bug #1] 调度器已正常启动，此时安全地清除挂起标志并使能按键 NVIC 中断
+    NVIC_ClearPendingIRQ(GPIOB_INT_IRQn);
+    NVIC_EnableIRQ(GPIOB_INT_IRQn);
     
     for (;;)
     {
-        // 等待来自中断的任务通知，彻底放弃 20ms 轮询，实现微安级休眠
+        // 等唤醒通知
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         
-        // 1. 读取底层硬件状态
+        // 1. 物理消抖：等待 10ms 避开机械抖动区，在此期间任务挂起并让出 CPU
+        // 注：此时引脚中断在 ISR 中已被立刻禁用，因此延时期间绝对不会累加多余通知
+        vTaskDelay(pdMS_TO_TICKS(10));
+        
+        // 2. 读取消抖稳定后的最终硬件状态
         uint32_t pin_val = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
         app_key_state_e current_key_state = (pin_val & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
         
-        // 2. 送入纯逻辑状态机（内部自动处理边缘检测）
+        // 3. 清除在消抖延时期间由于接触不良或物理回弹挂起的硬件中断标志
+        DL_GPIO_clearInterruptStatus(KEY_PORT, KEY_B21_PIN);
+        
+        // 4. 保底清空在此期间可能积累的多余任务通知，确保下一次等待为干净状态
+        ulTaskNotifyTake(pdTRUE, 0);
+        
+        // 5. 重新使能按键引脚中断，准备下一次检测
+        DL_GPIO_enableInterrupt(KEY_PORT, KEY_B21_PIN);
+        
+        // 6. 送入纯逻辑状态机（内部自动处理边缘检测）
         bool toggled = app_control_update(&app_ctx, current_key_state);
         
-        // 3. 处理逻辑层输出
+        // 7. 处理逻辑层输出
         if (toggled)
         {
             /* 物理层绝对服从逻辑层状态（不使用相对翻转） */
@@ -118,7 +137,12 @@ static void vLedBlinkTask(void *pvParameters)
     }
 }
 
-/* GPIOB (KEY_B21 所在组) 中断服务函数 */
+/*
+ * GPIOB (KEY_B21 所在组) 中断服务函数
+ * 【中断分组映射说明】MSPM0 的 GPIOB 中断被路由到 INT_GROUP1，因此 ISR 函数名必须是
+ * GROUP1_IRQHandler（由启动文件中的向量表决定）。对应的 NVIC IRQn 为 GPIOB_INT_IRQn。
+ * 如果更换了 GPIO 端口，务必同步更新此 ISR 函数名与 NVIC_EnableIRQ 的 IRQn 参数。
+ */
 void GROUP1_IRQHandler(void)
 {
     // 获取 GPIOB 的中断状态
@@ -126,10 +150,13 @@ void GROUP1_IRQHandler(void)
     
     if (pending & KEY_B21_PIN)
     {
-        // 清除中断标志
+        // 1. [修复 Bug #2] 立即在中断层禁用引脚中断，锁死硬件状态，防范调度延迟期间的中断累加和吞键
+        DL_GPIO_disableInterrupt(GPIOB, KEY_B21_PIN);
+        
+        // 2. 清除中断标志
         DL_GPIO_clearInterruptStatus(GPIOB, KEY_B21_PIN);
         
-        // 通知 LED 任务去处理电平变化
+        // 3. 通知 LED 任务去处理电平变化
         if (led_task_handle != NULL) {
             BaseType_t xHigherPriorityTaskWoken = pdFALSE;
             vTaskNotifyGiveFromISR(led_task_handle, &xHigherPriorityTaskWoken);
@@ -156,6 +183,9 @@ void vPreSleepProcessing(unsigned long *ulExpectedIdleTime)
 {
     // 硬件级雷达扫描：如果检测到连接了调试器(DAPLink)，强行放弃深度休眠
     // Cortex-M 系列通用 DHCSR 寄存器地址为 0xE000EDF0，最低位 (bit 0) 为 C_DEBUGEN
+    // 【可移植性注意】ARMv6-M 规范中 CoreDebug 寄存器在 non-debug 状态下的访问行为
+    // 是 IMPLEMENTATION DEFINED。TI MSPM0 系列支持安全读取，但移植到其他 Cortex-M0+
+    // 芯片时需确认厂商是否允许非调试态访问 DHCSR，否则可能触发 Bus Fault。
     volatile uint32_t *dhcsr = (volatile uint32_t *)0xE000EDF0;
     if ((*dhcsr & 1) != 0) {
         *ulExpectedIdleTime = 0; // 预期休眠时间清零，FreeRTOS 将中止休眠流程，保证烧录/调试畅通无阻
@@ -235,6 +265,9 @@ void __attribute__((weak))
 vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 #endif
 {
+    // [修复] 立即彻底屏蔽所有硬件中断，保证受损系统在纯净的单核状态下把遗言打印出来
+    __disable_irq();
+
     // [致命错误护航] 发生栈溢出时，RTOS 环境可能已完全崩塌，绝对不能调用任何 RTOS API。
     // 使用最底层的纯硬件死等轮询方式，把导致崩溃的任务名称“遗言”发出去。
     debug_uart_send_string("\r\n[FATAL ERROR] FreeRTOS Stack Overflow detected in task: ");

@@ -1,11 +1,11 @@
 #include "app_control.h"
 #include <stddef.h>
 
-void app_control_init(app_context_t *ctx)
+void app_control_init(app_context_t *ctx, app_key_state_e init_key_state)
 {
     if (ctx != NULL) {
         ctx->led_state = APP_LED_OFF;
-        ctx->last_key_state = APP_KEY_RELEASED;
+        ctx->last_key_state = init_key_state;
     }
 }
 

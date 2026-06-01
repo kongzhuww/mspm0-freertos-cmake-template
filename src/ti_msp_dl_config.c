@@ -41,7 +41,6 @@
 #include "ti_msp_dl_config.h"
 
 DL_TimerA_backupConfig gTIM_delay_usBackup;
-DL_TimerA_backupConfig gTIM_delay_msBackup;
 
 /*
  *  ======== SYSCFG_DL_init ========
@@ -123,7 +122,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
     DL_GPIO_clearInterruptStatus(GPIOB, KEY_B21_PIN);
     DL_GPIO_enableInterrupt(GPIOB, KEY_B21_PIN);
     NVIC_SetPriority(GPIOB_INT_IRQn, 2);
-    NVIC_EnableIRQ(GPIOB_INT_IRQn);
+    // NVIC_EnableIRQ(GPIOB_INT_IRQn); // 延后至 FreeRTOS 任务启动后使能，避免初始化未就绪时触发 Hard Fault
 }
 
 
@@ -163,14 +162,14 @@ SYSCONFIG_WEAK void SYSCFG_DL_SYSCTL_init(void)
 
 
 /*
- * Timer clock configuration to be sourced by BUSCLK /  (10000000 Hz)
+ * Timer clock configuration to be sourced by BUSCLK /  (40000000 Hz)
  * timerClkFreq = (timerClkSrc / (timerClkDivRatio * (timerClkPrescale + 1)))
- *   1000000 Hz = 10000000 Hz / (8 * (9 + 1))
+ *   1000000 Hz = 40000000 Hz / (8 * (4 + 1))
  */
 static const DL_TimerA_ClockConfig gTIM_delay_usClockConfig = {
     .clockSel    = DL_TIMER_CLOCK_BUSCLK,
     .divideRatio = DL_TIMER_CLOCK_DIVIDE_8,
-    .prescale    = 9U,
+    .prescale    = 4U,
 };
 
 /*
@@ -228,8 +227,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_DEBUG_init(void)
 
 
     /* Configure Interrupts */
-    DL_UART_Main_enableInterrupt(UART_DEBUG_INST,
-                                 DL_UART_MAIN_INTERRUPT_RX);
+    // 注意：RX 中断已禁用，因为当前工程无 RX 处理逻辑。如需接收串口数据，请打开此行并实现 RX 中断处理。
+    // DL_UART_Main_enableInterrupt(UART_DEBUG_INST, DL_UART_MAIN_INTERRUPT_RX);
     /* Setting the Interrupt Priority */
     NVIC_SetPriority(UART_DEBUG_INST_INT_IRQN, 3);
 

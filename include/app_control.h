@@ -26,7 +26,7 @@ typedef struct {
  * @brief 初始化应用程序控制器上下文
  * @param ctx 待初始化的控制器上下文
  */
-void app_control_init(app_context_t *ctx);
+void app_control_init(app_context_t *ctx, app_key_state_e init_key_state);
 
 /**
  * @brief 更新按键控制逻辑状态机（纯算法，无硬件依赖）

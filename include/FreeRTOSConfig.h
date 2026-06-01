@@ -76,7 +76,6 @@
  * 函数的实现位于StaticAllocs_freertos.c中。
  * 它们是从FreeRTOS配置文档中提取的示例实现
  */
-#define configSUPPORT_STATIC_ALLOCATION 1
 
 /* 空闲任务栈大小（以字为单位） */
 #define configIDLE_TASK_STACK_DEPTH (configMINIMAL_STACK_SIZE)
@@ -132,11 +131,13 @@ extern void vPreSleepProcessing(unsigned long *ulExpectedIdleTime);
  */
 #define configCHECK_FOR_STACK_OVERFLOW 2
 #define configASSERT(x)           \
-    if ((x) == 0) {               \
-        taskDISABLE_INTERRUPTS(); \
-        for (;;)                  \
-            ;                     \
-    }                            // 断言宏，当条件不满足时进入死循环
+    do {                          \
+        if ((x) == 0) {           \
+            taskDISABLE_INTERRUPTS(); \
+            for (;;)              \
+                ;                 \
+        }                         \
+    } while(0)                    // 断言宏，当条件不满足时进入死循环
 /*
  * 队列注册表允许将文本名称与队列关联，以便在支持RTOS内核的调试器中
  * 轻松识别队列
@@ -152,7 +153,7 @@ extern void vPreSleepProcessing(unsigned long *ulExpectedIdleTime);
 #define configTIMER_TASK_PRIORITY (5)                  // 定时器任务的优先级
 #define configTIMER_QUEUE_LENGTH (20)                  // 定时器队列长度
 /* 定时器任务栈大小（以字为单位） */
-#define configTIMER_TASK_STACK_DEPTH (configMINIMAL_STACK_SIZE)
+#define configTIMER_TASK_STACK_DEPTH (256)
 
 #define configENABLE_BACKWARD_COMPATIBILITY 0          // 禁用向后兼容性
 
@@ -193,6 +194,12 @@ extern void vPreSleepProcessing(unsigned long *ulExpectedIdleTime);
 #define NDK_TLS_INDEX 0 /* 为NDK TLS保留一个索引 */
 
 /* 注意：未实现newlib所需的系统锁 */
+/*
+ * 【潜在冲突警告】configUSE_NEWLIB_REENTRANT 为 1 时，newlib 的可重入结构内部可能
+ * 调用 malloc（例如使用 %f 浮点格式化时）。由于 configSUPPORT_DYNAMIC_ALLOCATION
+ * 已被禁用（第 69 行），这种情况下会导致链接失败或运行时 HardFault。
+ * 如需使用浮点 printf，请启用动态分配或改用定点整数格式化。
+ */
 #define configUSE_NEWLIB_REENTRANT 1                   // 启用newlib重入功能
 
 #endif
