@@ -17,6 +17,18 @@ if(CLANG_TIDY_EXE)
 endif()
 
 # ==============================================================================
+# 编译器标志设置（必须在 add_subdirectory 之前，确保组件库继承正确的 CPU 架构）
+# ==============================================================================
+if(CMAKE_CROSSCOMPILING)
+    set(CPU_FLAGS "-mcpu=cortex-m0plus -mthumb")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CPU_FLAGS} -g -ffunction-sections -fdata-sections -Wall")
+    set(CMAKE_C_FLAGS_DEBUG "-O0")
+    set(CMAKE_C_FLAGS_RELEASE "-O2 -flto")
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CPU_FLAGS} -x assembler-with-cpp")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CPU_FLAGS} --specs=nano.specs --specs=nosys.specs -Wl,-Map=${PROJECT_NAME}.map -Wl,--gc-sections -flto")
+endif()
+
+# ==============================================================================
 # 引入比赛专用驱动组件库 (Components)
 # ==============================================================================
 # 这行代码会将 components/ 目录下的所有独立外设驱动加入到构建树中
@@ -24,16 +36,8 @@ add_subdirectory(components)
 
 if(CMAKE_CROSSCOMPILING)
     # --------- 交叉编译到单片机 ---------
-    
-    # 设置目标 CPU 和交叉编译标志
-    set(CPU_FLAGS "-mcpu=cortex-m0plus -mthumb")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CPU_FLAGS} -g -ffunction-sections -fdata-sections -Wall")
-    set(CMAKE_C_FLAGS_DEBUG "-O0")
-    set(CMAKE_C_FLAGS_RELEASE "-O2 -flto")
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${CPU_FLAGS} -x assembler-with-cpp")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CPU_FLAGS} --specs=nano.specs --specs=nosys.specs -Wl,-Map=${PROJECT_NAME}.map -Wl,--gc-sections -flto")
 
-    # (已移除全局 add_definitions 和 include_directories，改为 Target 精准配置)
+    # (编译器标志已在 add_subdirectory 之前设置，此处不再重复)
 
 
     # 业务源码 (启动文件一并算入，保证精确链接)
@@ -135,7 +139,7 @@ if(CMAKE_CROSSCOMPILING)
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
     # 若需使用驱动，将组件名称（如 component_dummy_sensor）追加在下方
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_dummy_sensor third_party_lib driverlib)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_oled component_dummy_sensor third_party_lib driverlib)
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计

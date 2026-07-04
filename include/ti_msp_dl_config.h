@@ -124,6 +124,28 @@ extern "C" {
 #define LED_B14_PIN                                             (DL_GPIO_PIN_14)
 #define LED_B14_IOMUX                                            (IOMUX_PINCM31)
 
+/* Port definition for Pin Group OLED (7-Pin SPI 模拟) */
+/* SCL (D0): GPIOB.9 with pinCMx 26 */
+#define OLED_SCL_PORT                                                    (GPIOB)
+#define OLED_SCL_PIN                                             (DL_GPIO_PIN_9)
+#define OLED_SCL_IOMUX                                           (IOMUX_PINCM26)
+/* SDA (D1): GPIOB.8 with pinCMx 25 */
+#define OLED_SDA_PORT                                                    (GPIOB)
+#define OLED_SDA_PIN                                             (DL_GPIO_PIN_8)
+#define OLED_SDA_IOMUX                                           (IOMUX_PINCM25)
+/* RES: GPIOB.10 with pinCMx 27 */
+#define OLED_RES_PORT                                                    (GPIOB)
+#define OLED_RES_PIN                                            (DL_GPIO_PIN_10)
+#define OLED_RES_IOMUX                                           (IOMUX_PINCM27)
+/* DC: GPIOB.11 with pinCMx 28 */
+#define OLED_DC_PORT                                                     (GPIOB)
+#define OLED_DC_PIN                                             (DL_GPIO_PIN_11)
+#define OLED_DC_IOMUX                                            (IOMUX_PINCM28)
+/* CS: GPIOA.13 with pinCMx 35 */
+#define OLED_CS_PORT                                                     (GPIOA)
+#define OLED_CS_PIN                                             (DL_GPIO_PIN_13)
+#define OLED_CS_IOMUX                                            (IOMUX_PINCM35)
+
 
 /* clang-format on */
 

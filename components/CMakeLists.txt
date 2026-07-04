@@ -3,3 +3,6 @@
 
 # 示例：添加 dummy_sensor 组件
 add_subdirectory(dummy_sensor)
+
+# OLED SSD1306 7-Pin SPI 模拟驱动
+add_subdirectory(oled)

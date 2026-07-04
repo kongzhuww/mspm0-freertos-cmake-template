@@ -44,18 +44,26 @@
 #include "logger.h"
 #include "tim_delay.h"
 #include "app_control.h"
+#include "oled.h"
 
 /* 定义任务栈大小和优先级 */
 #define LED_TASK_STACK_SIZE      512
 #define LED_TASK_PRIORITY        1
+
+#define OLED_TASK_STACK_SIZE     512
+#define OLED_TASK_PRIORITY       2
 
 /* 静态任务控制块和栈空间 */
 static StaticTask_t led_task_tcb;
 static StackType_t led_task_stack[LED_TASK_STACK_SIZE];
 static TaskHandle_t led_task_handle = NULL;
 
+static StaticTask_t oled_task_tcb;
+static StackType_t oled_task_stack[OLED_TASK_STACK_SIZE];
+
 /* 任务函数原型 */
 static void vLedBlinkTask(void *pvParameters);
+static void vOledDisplayTask(void *pvParameters);
 
 
 int main(void)
@@ -75,11 +83,39 @@ int main(void)
         &led_task_tcb               /* 任务控制块 */
     );
     
+    /* 创建静态任务 - OLED 显示任务 */
+    xTaskCreateStatic(
+        vOledDisplayTask,           /* 任务函数 */
+        "OledDisplay",              /* 任务名称 */
+        OLED_TASK_STACK_SIZE,       /* 栈深度 */
+        NULL,                       /* 参数 */
+        OLED_TASK_PRIORITY,         /* 优先级 */
+        oled_task_stack,            /* 栈内存 */
+        &oled_task_tcb              /* 任务控制块 */
+    );
+    
     /* 启动调度器 */
     vTaskStartScheduler();
 }
 
 
+
+/* OLED 显示任务实现 */
+static void vOledDisplayTask(void *pvParameters)
+{
+    (void) pvParameters;
+    
+    // 初始化 OLED 屏幕（包含 SSD1306 配置序列 + 清屏）
+    oled_init();
+    
+    // 在第一行显示 "Hello, World"
+    oled_show_string(0, 0, "Hello, World", 16);
+    
+    LOG_INFO("OLED initialized, displaying 'Hello, World'");
+    
+    // 显示完成后任务挂起，不再占用 CPU
+    vTaskSuspend(NULL);
+}
 
 /* LED闪烁/按键控制任务实现 */
 static void vLedBlinkTask(void *pvParameters)
