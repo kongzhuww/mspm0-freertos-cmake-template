@@ -46,13 +46,16 @@
 #include "app_control.h"
 #include "oled.h"
 #include "zdt_motor.h"
+#include "Easy_Menu_User.h"
 
 /* 定义任务栈大小和优先级 */
 #define LED_TASK_STACK_SIZE      512
 #define LED_TASK_PRIORITY        1
 
 #define OLED_TASK_STACK_SIZE     512
-#define OLED_TASK_PRIORITY       2
+#define OLED_TASK_PRIORITY    (tskIDLE_PRIORITY + 2)
+#define KEY_TASK_STACK_SIZE   128
+#define KEY_TASK_PRIORITY     (tskIDLE_PRIORITY + 2)
 
 /* 静态任务控制块和栈空间 */
 static StaticTask_t led_task_tcb;
@@ -62,9 +65,13 @@ static TaskHandle_t led_task_handle = NULL;
 static StaticTask_t oled_task_tcb;
 static StackType_t oled_task_stack[OLED_TASK_STACK_SIZE];
 
+static StaticTask_t key_task_tcb;
+static StackType_t key_task_stack[KEY_TASK_STACK_SIZE];
+
 /* 任务函数原型 */
 static void vLedBlinkTask(void *pvParameters);
 static void vOledDisplayTask(void *pvParameters);
+static void vKeyTask(void *pvParameters);
 
 
 static void zigbee_send_string(const char *str)
@@ -102,11 +109,31 @@ int main(void)
         &oled_task_tcb              /* 任务控制块 */
     );
     
+    /* 创建静态任务 - 按键轮询任务 */
+    xTaskCreateStatic(
+        vKeyTask,                   /* 任务函数 */
+        "KeyTask",                  /* 任务名称 */
+        KEY_TASK_STACK_SIZE,        /* 栈深度 */
+        NULL,                       /* 参数 */
+        KEY_TASK_PRIORITY,          /* 优先级 */
+        key_task_stack,             /* 栈内存 */
+        &key_task_tcb               /* 任务控制块 */
+    );
+    
     /* 启动调度器 */
     vTaskStartScheduler();
 }
 
 
+
+/* Easy_Menu 显示接口适配 */
+static void Menu_Display_Char(unsigned short int x, unsigned short int y, char ch, unsigned char reverse_flag) {
+    oled_show_char((uint8_t)x, (uint8_t)(y / 8), ch, 16, reverse_flag);
+}
+
+static void Menu_Display_Char_Line(unsigned short int x, unsigned char line, char ch, unsigned char reverse_flag) {
+    oled_show_char((uint8_t)x, line * 2, ch, 16, reverse_flag);
+}
 
 /* OLED 显示任务实现 */
 static void vOledDisplayTask(void *pvParameters)
@@ -116,13 +143,53 @@ static void vOledDisplayTask(void *pvParameters)
     // 初始化 OLED 屏幕（包含 SSD1306 配置序列 + 清屏）
     oled_init();
     
-    // 在第一行显示 "Hello, World"
-    oled_show_string(0, 0, "Hello, World", 16);
+    Easy_Menu_Init(Menu_Display_Char, Menu_Display_Char_Line, NULL, NULL);
+    Easy_Menu_Ui_Init();
     
-    LOG_INFO("OLED initialized, displaying 'Hello, World'");
+    LOG_INFO("OLED initialized, Easy_Menu starting");
     
-    // 显示完成后任务挂起，不再占用 CPU
-    vTaskSuspend(NULL);
+    while(1) {
+        Easy_Menu_Display(xTaskGetTickCount());
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+/* 按键扫描任务实现 */
+static void vKeyTask(void *pvParameters)
+{
+    (void) pvParameters;
+    
+    // 按键状态记录，0=未按下，1=已按下 (默认拉高)
+    uint8_t key1_last = 1, key2_last = 1, key3_last = 1, key4_last = 1;
+    
+    while(1) {
+        // 读取按键电平，0为按下
+        uint8_t key1_cur = (DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN) & KEY_B21_PIN) ? 1 : 0;
+        uint8_t key2_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A27_PIN) & KEY_A27_PIN) ? 1 : 0;
+        uint8_t key3_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A26_PIN) & KEY_A26_PIN) ? 1 : 0;
+        uint8_t key4_cur = (DL_GPIO_readPins(KEY_PORT, KEY_B23_PIN) & KEY_B23_PIN) ? 1 : 0;
+        
+        // 检测下降沿（按下）
+        if (key1_last == 1 && key1_cur == 0) {
+            Easy_Menu_Input(EASY_MENU_RIGHT);
+        }
+        if (key2_last == 1 && key2_cur == 0) {
+            Easy_Menu_Input(EASY_MENU_UP);
+        }
+        if (key3_last == 1 && key3_cur == 0) {
+            Easy_Menu_Input(EASY_MENU_DOWN);
+        }
+        if (key4_last == 1 && key4_cur == 0) {
+            Easy_Menu_Input(EASY_MENU_LEFT);
+        }
+        
+        key1_last = key1_cur;
+        key2_last = key2_cur;
+        key3_last = key3_cur;
+        key4_last = key4_cur;
+        
+        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms 软件消抖
+    }
 }
 
 /* LED闪烁/按键控制任务实现 */

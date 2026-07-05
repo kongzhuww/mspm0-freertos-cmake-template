@@ -9,3 +9,4 @@ add_subdirectory(oled)
 
 # 张大头闭环步进电机驱动
 add_subdirectory(zdt_motor)
+add_subdirectory(easy_menu)

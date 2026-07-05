@@ -116,12 +116,29 @@ extern "C" {
 /* Defines for B21: GPIOB.21 with pinCMx 49 on package pin 20 */
 #define KEY_B21_PIN                                             (DL_GPIO_PIN_21)
 #define KEY_B21_IOMUX                                            (IOMUX_PINCM49)
+
+#define KEY_A_PORT                                                       (GPIOA)
+#define KEY_A26_PIN                                             (DL_GPIO_PIN_26)
+#define KEY_A26_IOMUX                                            (IOMUX_PINCM59)
+#define KEY_A27_PIN                                             (DL_GPIO_PIN_27)
+#define KEY_A27_IOMUX                                            (IOMUX_PINCM60)
+
+#define KEY_B23_PIN                                             (DL_GPIO_PIN_23)
+#define KEY_B23_IOMUX                                            (IOMUX_PINCM51)
 /* Port definition for Pin Group LED */
 #define LED_PORT                                                         (GPIOB)
+#define LED_A_PORT                                                       (GPIOA)
 
 /* Defines for B14: GPIOB.14 with pinCMx 31 on package pin 2 */
 #define LED_B14_PIN                                             (DL_GPIO_PIN_14)
 #define LED_B14_IOMUX                                            (IOMUX_PINCM31)
+
+#define LED_A28_PIN                                             (DL_GPIO_PIN_28)
+#define LED_A28_IOMUX                                            (IOMUX_PINCM3)
+
+#define LED_A29_PIN                                             (DL_GPIO_PIN_29)
+#define LED_A29_IOMUX                                            (IOMUX_PINCM4)
+
 
 /* Port definition for Pin Group OLED (7-Pin SPI 模拟) */
 /* SCL (D0): GPIOB.9 with pinCMx 26 */
