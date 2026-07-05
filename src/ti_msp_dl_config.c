@@ -34,8 +34,7 @@
  *  ============ ti_msp_dl_config.c =============
  *  Configured MSPM0 DriverLib module definitions
  *
- *  DO NOT EDIT - This file is generated for the MSPM0G350X
- *  by the SysConfig tool.
+ *  This file is manually managed. SysConfig is no longer used.
  */
 
 #include "ti_msp_dl_config.h"
@@ -54,6 +53,8 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_SYSCTL_init();
     SYSCFG_DL_TIM_delay_us_init();
     SYSCFG_DL_UART_DEBUG_init();
+    SYSCFG_DL_UART_ZDT_init();
+    SYSCFG_DL_UART_ZIGBEE_init();
     /* Ensure backup structures have no valid state */
 	gTIM_delay_usBackup.backupRdy 	= false;
 
@@ -88,11 +89,15 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_GPIO_reset(GPIOB);
     DL_TimerA_reset(TIM_delay_us_INST);
     DL_UART_Main_reset(UART_DEBUG_INST);
+    DL_UART_Main_reset(UART_ZDT_INST);
+    DL_UART_Main_reset(UART_ZIGBEE_INST);
 
     DL_GPIO_enablePower(GPIOA);
     DL_GPIO_enablePower(GPIOB);
     DL_TimerA_enablePower(TIM_delay_us_INST);
     DL_UART_Main_enablePower(UART_DEBUG_INST);
+    DL_UART_Main_enablePower(UART_ZDT_INST);
+    DL_UART_Main_enablePower(UART_ZIGBEE_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
 
@@ -106,6 +111,16 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
         GPIO_UART_DEBUG_IOMUX_TX, GPIO_UART_DEBUG_IOMUX_TX_FUNC);
     DL_GPIO_initPeripheralInputFunction(
         GPIO_UART_DEBUG_IOMUX_RX, GPIO_UART_DEBUG_IOMUX_RX_FUNC);
+
+    DL_GPIO_initPeripheralOutputFunction(
+        GPIO_UART_ZDT_IOMUX_TX, GPIO_UART_ZDT_IOMUX_TX_FUNC);
+    DL_GPIO_initPeripheralInputFunction(
+        GPIO_UART_ZDT_IOMUX_RX, GPIO_UART_ZDT_IOMUX_RX_FUNC);
+
+    DL_GPIO_initPeripheralOutputFunction(
+        GPIO_UART_ZIGBEE_IOMUX_TX, GPIO_UART_ZIGBEE_IOMUX_TX_FUNC);
+    DL_GPIO_initPeripheralInputFunction(
+        GPIO_UART_ZIGBEE_IOMUX_RX, GPIO_UART_ZIGBEE_IOMUX_RX_FUNC);
 
     DL_GPIO_initDigitalInputFeatures(KEY_B21_IOMUX,
 		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
@@ -263,5 +278,80 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_DEBUG_init(void)
 
 
     DL_UART_Main_enable(UART_DEBUG_INST);
+}
+
+static const DL_UART_Main_ClockConfig gUART_ZDTClockConfig = {
+    .clockSel    = DL_UART_MAIN_CLOCK_BUSCLK,
+    .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
+};
+
+static const DL_UART_Main_Config gUART_ZDTConfig = {
+    .mode        = DL_UART_MAIN_MODE_NORMAL,
+    .direction   = DL_UART_MAIN_DIRECTION_TX_RX,
+    .flowControl = DL_UART_MAIN_FLOW_CONTROL_NONE,
+    .parity      = DL_UART_MAIN_PARITY_NONE,
+    .wordLength  = DL_UART_MAIN_WORD_LENGTH_8_BITS,
+    .stopBits    = DL_UART_MAIN_STOP_BITS_ONE
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_UART_ZDT_init(void)
+{
+    DL_UART_Main_setClockConfig(UART_ZDT_INST, (DL_UART_Main_ClockConfig *) &gUART_ZDTClockConfig);
+
+    DL_UART_Main_init(UART_ZDT_INST, (DL_UART_Main_Config *) &gUART_ZDTConfig);
+    /*
+     * Configure baud rate by setting oversampling and baud rate divisors.
+     *  Target baud rate: 115200
+     *  Actual baud rate: 115190.78
+     */
+    DL_UART_Main_setOversampling(UART_ZDT_INST, DL_UART_OVERSAMPLING_RATE_16X);
+    DL_UART_Main_setBaudRateDivisor(UART_ZDT_INST, UART_ZDT_IBRD_40_MHZ_115200_BAUD, UART_ZDT_FBRD_40_MHZ_115200_BAUD);
+
+
+    /* Configure Interrupts */
+    // 注意：如果有需要接收串口数据（如查询电机位置），请打开此行并实现 RX 中断处理
+    // DL_UART_Main_enableInterrupt(UART_ZDT_INST, DL_UART_MAIN_INTERRUPT_RX);
+    /* Setting the Interrupt Priority */
+    NVIC_SetPriority(UART_ZDT_INST_INT_IRQN, 3);
+
+
+    DL_UART_Main_enable(UART_ZDT_INST);
+}
+
+static const DL_UART_Main_ClockConfig gUART_ZIGBEEClockConfig = {
+    .clockSel    = DL_UART_MAIN_CLOCK_BUSCLK,
+    .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
+};
+
+static const DL_UART_Main_Config gUART_ZIGBEEConfig = {
+    .mode        = DL_UART_MAIN_MODE_NORMAL,
+    .direction   = DL_UART_MAIN_DIRECTION_TX_RX,
+    .flowControl = DL_UART_MAIN_FLOW_CONTROL_NONE,
+    .parity      = DL_UART_MAIN_PARITY_NONE,
+    .wordLength  = DL_UART_MAIN_WORD_LENGTH_8_BITS,
+    .stopBits    = DL_UART_MAIN_STOP_BITS_ONE
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_UART_ZIGBEE_init(void)
+{
+    DL_UART_Main_setClockConfig(UART_ZIGBEE_INST, (DL_UART_Main_ClockConfig *) &gUART_ZIGBEEClockConfig);
+
+    DL_UART_Main_init(UART_ZIGBEE_INST, (DL_UART_Main_Config *) &gUART_ZIGBEEConfig);
+    /*
+     * Configure baud rate by setting oversampling and baud rate divisors.
+     *  Target baud rate: 115200
+     *  Actual baud rate: 115190.78
+     */
+    DL_UART_Main_setOversampling(UART_ZIGBEE_INST, DL_UART_OVERSAMPLING_RATE_16X);
+    DL_UART_Main_setBaudRateDivisor(UART_ZIGBEE_INST, UART_ZIGBEE_IBRD_40_MHZ_115200_BAUD, UART_ZIGBEE_FBRD_40_MHZ_115200_BAUD);
+
+
+    /* Configure Interrupts */
+    // DL_UART_Main_enableInterrupt(UART_ZIGBEE_INST, DL_UART_MAIN_INTERRUPT_RX);
+    /* Setting the Interrupt Priority */
+    NVIC_SetPriority(UART_ZIGBEE_INST_INT_IRQN, 3);
+
+
+    DL_UART_Main_enable(UART_ZIGBEE_INST);
 }
 

@@ -139,7 +139,7 @@ if(CMAKE_CROSSCOMPILING)
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
     # 若需使用驱动，将组件名称（如 component_dummy_sensor）追加在下方
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_oled component_dummy_sensor third_party_lib driverlib)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_oled component_dummy_sensor component_zdt_motor third_party_lib driverlib)
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计

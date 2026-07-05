@@ -34,8 +34,7 @@
  *  ============ ti_msp_dl_config.h =============
  *  Configured MSPM0 DriverLib module declarations
  *
- *  DO NOT EDIT - This file is generated for the MSPM0G350X
- *  by the SysConfig tool.
+ *  This file is manually managed. SysConfig is no longer used.
  */
 #ifndef ti_msp_dl_config_h
 #define ti_msp_dl_config_h
@@ -146,6 +145,39 @@ extern "C" {
 #define OLED_CS_PIN                                             (DL_GPIO_PIN_13)
 #define OLED_CS_IOMUX                                            (IOMUX_PINCM35)
 
+/* Defines for UART_ZDT */
+#define UART_ZDT_INST                                                    UART2
+#define UART_ZDT_INST_FREQUENCY                                       40000000
+#define UART_ZDT_INST_IRQHandler                              UART2_IRQHandler
+#define UART_ZDT_INST_INT_IRQN                                  UART2_INT_IRQn
+#define GPIO_UART_ZDT_RX_PORT                                            GPIOB
+#define GPIO_UART_ZDT_TX_PORT                                            GPIOB
+#define GPIO_UART_ZDT_RX_PIN                                    DL_GPIO_PIN_16
+#define GPIO_UART_ZDT_TX_PIN                                    DL_GPIO_PIN_15
+#define GPIO_UART_ZDT_IOMUX_RX                                 (IOMUX_PINCM33)
+#define GPIO_UART_ZDT_IOMUX_TX                                 (IOMUX_PINCM32)
+#define GPIO_UART_ZDT_IOMUX_RX_FUNC                  IOMUX_PINCM33_PF_UART2_RX
+#define GPIO_UART_ZDT_IOMUX_TX_FUNC                  IOMUX_PINCM32_PF_UART2_TX
+#define UART_ZDT_BAUD_RATE                                            (115200)
+#define UART_ZDT_IBRD_40_MHZ_115200_BAUD                                  (21)
+#define UART_ZDT_FBRD_40_MHZ_115200_BAUD                                  (45)
+
+/* Defines for UART_ZIGBEE */
+#define UART_ZIGBEE_INST                                           UART1
+#define GPIO_UART_ZIGBEE_TX_PORT                                         GPIOA
+#define GPIO_UART_ZIGBEE_RX_PORT                                         GPIOA
+#define GPIO_UART_ZIGBEE_TX_PIN                                 DL_GPIO_PIN_8
+#define GPIO_UART_ZIGBEE_RX_PIN                                 DL_GPIO_PIN_9
+#define GPIO_UART_ZIGBEE_IOMUX_TX                              (IOMUX_PINCM19)
+#define GPIO_UART_ZIGBEE_IOMUX_RX                              (IOMUX_PINCM20)
+#define GPIO_UART_ZIGBEE_IOMUX_TX_FUNC               IOMUX_PINCM19_PF_UART1_TX
+#define GPIO_UART_ZIGBEE_IOMUX_RX_FUNC               IOMUX_PINCM20_PF_UART1_RX
+#define UART_ZIGBEE_BAUD_RATE                                         (115200)
+#define UART_ZIGBEE_IBRD_40_MHZ_115200_BAUD                               (21)
+#define UART_ZIGBEE_FBRD_40_MHZ_115200_BAUD                               (45)
+#define UART_ZIGBEE_INST_INT_IRQN                                 UART1_INT_IRQn
+#define UART_ZIGBEE_INST_IRQHandler                             UART1_IRQHandler
+
 
 /* clang-format on */
 
@@ -155,6 +187,8 @@ void SYSCFG_DL_GPIO_init(void);
 void SYSCFG_DL_SYSCTL_init(void);
 void SYSCFG_DL_TIM_delay_us_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);
+void SYSCFG_DL_UART_ZDT_init(void);
+void SYSCFG_DL_UART_ZIGBEE_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);

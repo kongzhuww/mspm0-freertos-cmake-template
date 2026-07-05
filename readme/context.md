@@ -31,13 +31,17 @@
 
 ### 3.3 极致防错与低功耗架构
 - **栈溢出“遗言”机制**: 若开发中遇到单片机突然卡死，通常是由于任务栈溢出 (`Stack Overflow`) 导致。系统已重写了 `vApplicationStackOverflowHook`，在死机前会通过极其可靠的**纯硬件串口轮询**将越界任务的名称打印出来。
-- **微安级休眠**: 系统开启了 `configUSE_IDLE_HOOK`，任何时候当 RTOS 没有高优先级任务时（例如等待 20ms 的 Delay），将自动执行 `__WFI()` 指令挂起 CPU 时钟。这种设计将待机功耗降至了极限。
+- **低功耗休眠策略 (可进一步优化)**: 目前系统开启了 `configUSE_IDLE_HOOK`，当 RTOS 没有高优先级任务时（例如等待 20ms 的 Delay），将自动执行 `__WFI()` 指令挂起 CPU 时钟，进入浅度 Sleep 模式。但注意此模式下 `SysTick` 依然会每 1ms 唤醒一次 CPU。**如需实现真正的微安级极限低功耗**，后续应考虑启用 FreeRTOS 的 Tickless Idle 机制 (`configUSE_TICKLESS_IDLE 1`)，彻底关停心跳定时器并进入 Deep Sleep 甚至 Standby 模式。
 
 ### 3.4 GCC Newlib-Nano 库与浮点/换行处理
 - 编译启用了极简裸机标准库 `--specs=nano.specs --specs=nosys.specs` 以节省 Flash。
 - 在 `_write` 重定向底层（`UART0_Debug.c`），已经实现了 `\n` 自动转换为 `\r\n` 的逻辑，所以在 `printf` 和日志宏中只需使用 `\n` 即可。
 
+### 3.5 特殊引脚复用的波特率漂移陷阱 (UART3 踩坑警示)
+- **坑点**: MSPM0 的某些引脚（如复用为高速 Flash 接口的 PB12/PB13）如果强行映射为普通 UART 使用，容易因外部电路、阻抗或系统时钟域分配的特殊性而导致波特率分频严重失准。例如设定为 115200 波特率时，实际波形可能漂移至 57600 等诡异数值，导致通信乱码且极难排查。
+- **解法**: 优先使用标准外设引脚（例如 PA8/PA9 作为 UART 等）。
+
 ## 4. 开发工作流指南
-- **新外设接入**: 硬件层面上由于去除了官方的 `syscfg` GUI 自动生成工具依赖，所有的引脚与外设初始化目前在 `src/ti_msp_dl_config.c` 中直接管理。
+- **新外设接入**: 硬件层面上已经去除了官方的 `syscfg` GUI 自动生成工具依赖，所有的引脚与外设初始化目前在 `src/ti_msp_dl_config.c` 中直接手动管理。（*注：底层的 `.h` 和 `.c` 文件头部原有的 `DO NOT EDIT` 警告已经被统一删除并变更为 `This file is manually managed`，以防止 AI 助手误判拒绝对这些文件进行维护。*）
 - **编写逻辑代码**: 请务必参考 `app_control.c`，把状态机剥离到纯 C 层，然后在 `test_app_control.c` 中编写单元测试。
 - **代码检查**: 主工程与测试工程均在 CMake 中挂载了 `clang-tidy`（配置于 `MY_CLANG_TIDY_CMD`）。新代码如有不合规将会报黄。

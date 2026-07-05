@@ -45,6 +45,7 @@
 #include "tim_delay.h"
 #include "app_control.h"
 #include "oled.h"
+#include "zdt_motor.h"
 
 /* 定义任务栈大小和优先级 */
 #define LED_TASK_STACK_SIZE      512
@@ -65,6 +66,13 @@ static StackType_t oled_task_stack[OLED_TASK_STACK_SIZE];
 static void vLedBlinkTask(void *pvParameters);
 static void vOledDisplayTask(void *pvParameters);
 
+
+static void zigbee_send_string(const char *str)
+{
+    while (*str) {
+        DL_UART_Main_transmitDataBlocking(UART_ZIGBEE_INST, *str++);
+    }
+}
 
 int main(void)
 {
@@ -132,6 +140,13 @@ static void vLedBlinkTask(void *pvParameters)
     NVIC_ClearPendingIRQ(GPIOB_INT_IRQn);
     NVIC_EnableIRQ(GPIOB_INT_IRQn);
     
+    // 初始化并使能张大头电机（地址 0x01）
+    zdt_motor_init();
+    zdt_motor_enable(0x01, true);
+    
+    // 延时等待电机锁轴稳定
+    vTaskDelay(pdMS_TO_TICKS(500));
+    
     for (;;)
     {
         // 等唤醒通知
@@ -166,6 +181,20 @@ static void vLedBlinkTask(void *pvParameters)
             } else {
                 board_led_off();
             }
+            
+            // 每次按键有效触发时，让电机转一圈
+            // 位置模式指令自带速度和加速度参数，不需要额外发速度指令
+            // 地址0x01，顺时针，60RPM，加速度0（直接启动），3200脉冲=一整圈
+            zdt_motor_move_rel(0x01, 0, 60, 0, 3200);
+            
+            // 按键触发时发送 Zigbee 数据
+            // 发送唤醒字节 (0xFF)，唤醒可能处于休眠的 Zigbee 模块
+            DL_UART_Main_transmitDataBlocking(UART_ZIGBEE_INST, 0xFF);
+            // 给 Zigbee 模块留出 20ms 的射频唤醒和握手时间
+            vTaskDelay(pdMS_TO_TICKS(20));
+            // 模块完全就绪后，再连续发送完整数据包
+            // 使用中文“你好世界”测试，用于验证终端的 UTF-8/GBK 编码解析
+            zigbee_send_string("你好世界\r\n");
             
             // 打印按键触发日志
             LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (app_ctx.led_state == APP_LED_ON) ? "ON" : "OFF");
