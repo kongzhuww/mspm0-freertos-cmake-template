@@ -242,18 +242,6 @@ static void vLedBlinkTask(void *pvParameters)
         // 7. 处理逻辑层输出
         if (toggled)
         {
-            /* 物理层绝对服从逻辑层状态（不使用相对翻转） */
-            if (app_ctx.led_state == APP_LED_ON) {
-                board_led_on();
-            } else {
-                board_led_off();
-            }
-            
-            // 每次按键有效触发时，让电机转一圈
-            // 位置模式指令自带速度和加速度参数，不需要额外发速度指令
-            // 地址0x01，顺时针，60RPM，加速度0（直接启动），3200脉冲=一整圈
-            zdt_motor_move_rel(0x01, 0, 60, 0, 3200);
-            
             // 按键触发时发送 Zigbee 数据
             // 发送唤醒字节 (0xFF)，唤醒可能处于休眠的 Zigbee 模块
             DL_UART_Main_transmitDataBlocking(UART_ZIGBEE_INST, 0xFF);
@@ -264,7 +252,7 @@ static void vLedBlinkTask(void *pvParameters)
             zigbee_send_string("你好世界\r\n");
             
             // 打印按键触发日志
-            LOG_INFO("KEY (PB21) State Machine Triggered! LED toggled to %s", (app_ctx.led_state == APP_LED_ON) ? "ON" : "OFF");
+            LOG_INFO("KEY (PB21) State Machine Triggered!");
         }
     }
 }

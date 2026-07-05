@@ -45,6 +45,17 @@ void zdt_motor_set_speed(uint8_t addr, uint8_t dir, uint16_t rpm, uint8_t acc);
 void zdt_motor_move_rel(uint8_t addr, uint8_t dir, uint16_t speed, uint8_t acc, uint32_t pulses);
 
 /**
+ * @brief 绝对位置模式控制（按照绝对坐标旋转）
+ *        指令：addr + FD + 方向(可忽略) + 速度H + 速度L + 加速度 + 脉冲(4字节) + 01 + 00 + 6B
+ * @param addr 电机地址
+ * @param dir 0=CW(顺时针), 1=CCW(逆时针) 驱动器会根据当前位置自动选择最佳方向，通常传0即可
+ * @param speed 运行速度 (RPM)
+ * @param acc 加速度档位
+ * @param angle 目标角度（0~360等），底层会自动按16细分换算为脉冲数发送
+ */
+void zdt_motor_move_angle_abs(uint8_t addr, uint8_t dir, uint16_t speed, uint8_t acc, float angle);
+
+/**
  * @brief 立即停止（紧急刹车）
  *        指令：addr + FE + 98 + 00 + 6B
  * @param addr 电机地址
