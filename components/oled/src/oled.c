@@ -11,9 +11,9 @@
     if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED) { \
         vTaskDelay(pdMS_TO_TICKS(ms)); \
     } else { \
-        delay_us((ms) * 1000); \
+        for(uint32_t _i = 0; _i < (ms); _i++) delay_us(1000); \
     } \
-} while(0)
+} while (0)
 
 // 引脚操作宏
 // SCL (D0): B9, SDA (D1): B8, RES: B10, DC: B11, CS: A13

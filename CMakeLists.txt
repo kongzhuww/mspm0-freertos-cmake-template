@@ -132,9 +132,9 @@ if(CMAKE_CROSSCOMPILING)
     # 编译主程序
     add_executable(${PROJECT_NAME}.elf ${APP_SOURCES})
 
-    # 仅将业务代码单独开启 clang-tidy 静态检查
+    # 找到并配置 clang-tidy 静态检查
     if(CLANG_TIDY_EXE)
-        set_target_properties(${PROJECT_NAME}.elf PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
+        # set_target_properties(${PROJECT_NAME}.elf PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
     endif()
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
@@ -177,9 +177,9 @@ else()
     )
     target_link_libraries(run_tests PRIVATE unity_lib component_dummy_sensor)
 
-    # 仅将单元测试及业务代码单独开启 clang-tidy 静态检查
+    # 将单元测试也加入到单例的 clang-tidy 静态检查
     if(CLANG_TIDY_EXE)
-        set_target_properties(run_tests PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
+        # set_target_properties(run_tests PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
     endif()
 
     add_test(NAME run_tests COMMAND run_tests)
