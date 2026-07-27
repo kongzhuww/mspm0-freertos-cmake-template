@@ -5,8 +5,7 @@ project(MSPM0G3507_FreeRTOS C ASM CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# 启用 GCC JSON 格式编译错误输出
-add_compile_options(-fdiagnostics-format=json)
+# 使用默认编译错误输出，避免 clangd 解析 GCC 专用 JSON 诊断参数时报错
 
 # 启用 clang-tidy (如果可用)
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
@@ -139,7 +138,7 @@ if(CMAKE_CROSSCOMPILING)
 
     # 链接静态库和链接脚本 (由于启动文件已被移动至 APP_SOURCES，此处可以按需链接，丢弃 --whole-archive)
     # 若需使用驱动，将组件名称（如 component_dummy_sensor）追加在下方
-    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_oled component_dummy_sensor component_zdt_motor component_easy_menu third_party_lib driverlib)
+    target_link_libraries(${PROJECT_NAME}.elf PRIVATE component_oled component_dummy_sensor component_tb6612 component_gray_adc component_control component_easy_menu third_party_lib driverlib)
     target_link_options(${PROJECT_NAME}.elf PRIVATE -T ${LINKER_SCRIPT})
 
     # 生成 bin/hex 辅助构建目标，并输出 size 统计

@@ -8,6 +8,7 @@
 #include "ti_msp_dl_config.h"
 #include "oled.h"
 #include "OLED_Data.h"
+#include "control.h"
 /* USER CODE PUBLIC END */
 
 /* ================================================================= 占位变量 ================================================================= */
@@ -47,18 +48,10 @@ struct {
 /* ============================================================== 页面、条目定义 ============================================================== */    
 Ordinary_Page main_page;
     Goto_Item goto__start_page;
-    Goto_Item goto__Text_Page;
     Goto_Item goto__Switch_Page;
     Goto_Item goto__Data_Page;
-    Goto_Item goto__Enum_Page;
     Goto_Item goto__User_Show_Page;
-    Goto_Item goto__Goto_Page;
     Show_Page start_page;
-    Ordinary_Page Text_Page;
-        Text_Item text_page__1__item;
-        Text_Item text_page__2__item;
-        Text_Item text_page__3__item;
-        Text_Item text_page__4__item;
     Ordinary_Page Switch_Page;
         Switch_Item switch_page__1__item;
         Switch_Item switch_page__2__item;
@@ -72,48 +65,12 @@ Ordinary_Page main_page;
         Data_Item data_page__5__item;
         Data_Item data_page__6__item;
         Data_Item data_page__7__item;
-    Ordinary_Page Enum_Page;
-        Enum_Item mode;
-        Enum_Item state;
     Ordinary_Page User_Show_Page;
         Show_Item user_show_page__1__item;
         Show_Item user_show_page__2__item;
         Show_Item user_show_page__3__item;
         Show_Item user_show_page__4__item;
-    Ordinary_Page Goto_Page;
-        Goto_Item goto__goto_1_page;
-        Goto_Item goto__Goto_Page_2;
-        Goto_Item goto__goto_3_page;
-        Goto_Item goto__Goto_Page_4;
-        Ordinary_Page goto_1_page;
-            Goto_Item goto__goto_11_page;
-            Ordinary_Page goto_11_page;
-                Goto_Item goto__goto_111_page;
-                Ordinary_Page goto_111_page;
-                    Text_Item goto_111_page__1__item;
-                    Goto_Item goto__goto_111_page__2__item;
-        Ordinary_Page goto_3_page;
-            Text_Item test;
-/* ================================================================= 枚举列表 ================================================================= */
-char *mode_enum_str[3] = {
-    "Static",
-    "Slow",
-    "Fast"
-};
-
-char *state_enum_str[2] = {
-    "Run",
-    "Stop"
-};
-
 /* ============================================================== 回调函数（条目） ============================================================ */
-void Text_Page__2__Item_Callback(char *str)
-{
-    /* USER CODE BEGIN */
-
-    /* USER CODE END */
-}
-
 void Switch_Page__1__Item_Callback(unsigned char data)
 {
     /* USER CODE BEGIN */
@@ -203,13 +160,6 @@ void Data_Page__7__Item_Callback(void *data) // *((float*)data)
     /* USER CODE END */
 }
 
-void Mode_Callback(char *str)
-{
-    /* USER CODE BEGIN */
-
-    /* USER CODE END */
-}
-
 void User_Show_Page__1__Item_Callback(void)
 {
     /* USER CODE BEGIN */
@@ -266,59 +216,57 @@ const char ch[4] = {'|', '/', '-', '\\'};
 unsigned char show_page_len = 0;
 unsigned char show_page_index = 0;
 unsigned char ch_index = 0;
+static uint8_t start_page_cat_frame = 0;
+static int16_t start_page_cat_x_offset = -128;
 /* USER CODE VALUE END */
 /* Private function ----------------------------------------------------------*/
 void Start_Page_Enter_Callback(void)
 {
     /* USER CODE BEGIN */
-    // 清屏，准备播放动画
+    // 进入 Start 页面就启动循迹控制；控制任务会按 20ms 周期真正读取灰度并驱动 TB6612。
+    // 小猫动画也从屏幕左侧重新开始，保留 Start 页面的“灵魂”。
+    start_page_cat_frame = 0;
+    start_page_cat_x_offset = -128;
     oled_clear();
+    Control_StartLineFollow();
     /* USER CODE END */
 }
 
 void Start_Page_Period_Callback(void* temp, Easy_Menu_Input_TYPE user_input)
 {
     /* USER CODE BEGIN */
-    static uint8_t frame = 0;
-    static int16_t x_offset = -128;
-    
-    // 如果有按键输入，则跳入主菜单
+    (void)temp;
+
+    // Start 页面作为运行页：任意按键都立即停车并回到主菜单，避免小车失控。
     if (user_input != EASY_MENU_NONE) {
+        Control_Stop();
         Easy_Menu_Goto_Page(PAGE(main_page));
         return;
     }
-    
-    // 画出一帧小猫
-    oled_draw_cat_frame(YueXinMao[frame], x_offset);
-    
-    // 每次跳过一帧，让猫咪本身的动作加快两倍
-    frame += 2;
-    if (frame >= 22) frame = 0;
-    
-    // 恢复原来的移动速度
-    x_offset += 2;
-    if (x_offset > 128) {
-        x_offset = -128;
+
+    // 循迹在控制任务里后台运行；这里继续画小猫，让跑车和动画同时存在。
+    oled_draw_cat_frame(YueXinMao[start_page_cat_frame], start_page_cat_x_offset);
+
+    // 每次跳过一帧，让猫咪本身的动作加快两倍。
+    start_page_cat_frame += 2;
+    if (start_page_cat_frame >= 22) {
+        start_page_cat_frame = 0;
+    }
+
+    // 小猫保持原来的横向移动速度，从左到右循环穿屏。
+    start_page_cat_x_offset += 2;
+    if (start_page_cat_x_offset > 128) {
+        start_page_cat_x_offset = -128;
     }
     /* USER CODE END */
 }
 
 /* =========================================================== 设置列表（普通页面） =========================================================== */
-Item *main_page_items[7] = {
+Item *main_page_items[4] = {
     ITEM(goto__start_page),
-    ITEM(goto__Text_Page),
     ITEM(goto__Switch_Page),
     ITEM(goto__Data_Page),
-    ITEM(goto__Enum_Page),
-    ITEM(goto__User_Show_Page),
-    ITEM(goto__Goto_Page)
-};
-
-Item *Text_Page_items[4] = {
-    ITEM(text_page__1__item),
-    ITEM(text_page__2__item),
-    ITEM(text_page__3__item),
-    ITEM(text_page__4__item)
+    ITEM(goto__User_Show_Page)
 };
 
 Item *Switch_Page_items[3] = {
@@ -337,11 +285,6 @@ Item *Data_Page_items[7] = {
     ITEM(data_page__7__item)
 };
 
-Item *Enum_Page_items[2] = {
-    ITEM(mode),
-    ITEM(state)
-};
-
 Item *User_Show_Page_items[4] = {
     ITEM(user_show_page__1__item),
     ITEM(user_show_page__2__item),
@@ -349,57 +292,24 @@ Item *User_Show_Page_items[4] = {
     ITEM(user_show_page__4__item)
 };
 
-Item *Goto_Page_items[4] = {
-    ITEM(goto__goto_1_page),
-    ITEM(goto__Goto_Page_2),
-    ITEM(goto__goto_3_page),
-    ITEM(goto__Goto_Page_4)
-};
-
-Item *goto_1_page_items[1] = {
-    ITEM(goto__goto_11_page)
-};
-
-Item *goto_11_page_items[1] = {
-    ITEM(goto__goto_111_page)
-};
-
-Item *goto_111_page_items[2] = {
-    ITEM(goto_111_page__1__item),
-    ITEM(goto__goto_111_page__2__item)
-};
-
-Item *goto_3_page_items[1] = {
-    ITEM(test)
-};
-
 /* ================================================================ 系统初始化 ================================================================ */
 void Easy_Menu_Ui_Init(void)
 {
 
-    Ordinary_Page_Init(NULL, PAGE(main_page), "Main", main_page_items, 7);
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__start_page), "Start page", PAGE(start_page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__Text_Page), "Text Page", PAGE(Text_Page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__Switch_Page), "Switch_Page", PAGE(Switch_Page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__Data_Page), "Data_Page", PAGE(Data_Page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__Enum_Page), "Enum_Page", PAGE(Enum_Page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__User_Show_Page), "Show_Page", PAGE(User_Show_Page));
-        Goto_Item_Init(PAGE(main_page), ITEM(goto__Goto_Page), "Goto_Page", PAGE(Goto_Page));
+    Ordinary_Page_Init(NULL, PAGE(main_page), "Main", main_page_items, 4);
+        Goto_Item_Init(PAGE(main_page), ITEM(goto__start_page), "Start", PAGE(start_page));
+        Goto_Item_Init(PAGE(main_page), ITEM(goto__Switch_Page), "Switch", PAGE(Switch_Page));
+        Goto_Item_Init(PAGE(main_page), ITEM(goto__Data_Page), "Data", PAGE(Data_Page));
+        Goto_Item_Init(PAGE(main_page), ITEM(goto__User_Show_Page), "Show", PAGE(User_Show_Page));
 
-    Show_Page_Init(PAGE(main_page), PAGE(start_page), "Start page", 150, Start_Page_Enter_Callback, Start_Page_Period_Callback, NULL);
+    Show_Page_Init(PAGE(main_page), PAGE(start_page), "Start", 150, Start_Page_Enter_Callback, Start_Page_Period_Callback, NULL);
 
-    Ordinary_Page_Init(PAGE(main_page), PAGE(Text_Page), "Text Page", Text_Page_items, 4);
-        Text_Item_Init(PAGE(Text_Page), ITEM(text_page__1__item), "Welcome", NULL);
-        Text_Item_Init(PAGE(Text_Page), ITEM(text_page__2__item), "Github:", Text_Page__2__Item_Callback);
-        Text_Item_Init(PAGE(Text_Page), ITEM(text_page__3__item), "https://github.com/", NULL);
-        Text_Item_Init(PAGE(Text_Page), ITEM(text_page__4__item), "2549850807/Easy_Menu", NULL);
-
-    Ordinary_Page_Init(PAGE(main_page), PAGE(Switch_Page), "Switch_Page", Switch_Page_items, 3);
+    Ordinary_Page_Init(PAGE(main_page), PAGE(Switch_Page), "Switch", Switch_Page_items, 3);
         Switch_Item_Init(PAGE(Switch_Page), ITEM(switch_page__1__item), "LED1", &Easy_Menu_Ui_Data.LED1__data, Switch_Page__1__Item_Callback);
         Switch_Item_Init(PAGE(Switch_Page), ITEM(switch_page__2__item), "LED2", &Easy_Menu_Ui_Data.LED2__data, Switch_Page__2__Item_Callback);
         Switch_Item_Init(PAGE(Switch_Page), ITEM(switch_page__3__item), "LED3", &Easy_Menu_Ui_Data.LED3__data, Switch_Page__3__Item_Callback);
 
-    Ordinary_Page_Init(PAGE(main_page), PAGE(Data_Page), "Data_Page", Data_Page_items, 7);
+    Ordinary_Page_Init(PAGE(main_page), PAGE(Data_Page), "Data", Data_Page_items, 7);
         Data_Item_Init(PAGE(Data_Page), ITEM(data_page__1__item), "uint8_t data", UNSIGNED_CHAR, &Easy_Menu_Ui_Data.uint8_data, UNSIGNED_CHAR_VAL(1), 1, UNSIGNED_CHAR_VAL(0), 0, UNSIGNED_CHAR_VAL(0), 0, Data_Page__1__Item_Callback);
         Data_Item_Init(PAGE(Data_Page), ITEM(data_page__2__item), "uint16_t data", UNSIGNED_SHORT_INT, &Easy_Menu_Ui_Data.uint16_data, UNSIGNED_SHORT_INT_VAL(1), 1, UNSIGNED_SHORT_INT_VAL(0), 0, UNSIGNED_SHORT_INT_VAL(0), 0, Data_Page__2__Item_Callback);
         Data_Item_Init(PAGE(Data_Page), ITEM(data_page__3__item), "uint32_t data", UNSIGNED_INT, &Easy_Menu_Ui_Data.uint32_data, UNSIGNED_INT_VAL(1), 1, UNSIGNED_INT_VAL(0), 0, UNSIGNED_INT_VAL(0), 0, Data_Page__3__Item_Callback);
@@ -408,34 +318,11 @@ void Easy_Menu_Ui_Init(void)
         Data_Item_Init(PAGE(Data_Page), ITEM(data_page__6__item), "int32_t data", SIGNED_INT, &Easy_Menu_Ui_Data.int32_data, SIGNED_INT_VAL(1), 1, SIGNED_INT_VAL(0), 0, SIGNED_INT_VAL(0), 0, Data_Page__6__Item_Callback);
         Data_Item_Init(PAGE(Data_Page), ITEM(data_page__7__item), "float data", FLOAT, &Easy_Menu_Ui_Data.float_data, FLOAT_VAL(0.1), 1, FLOAT_VAL(-10), 1, FLOAT_VAL(10), 1, Data_Page__7__Item_Callback);
 
-    Ordinary_Page_Init(PAGE(main_page), PAGE(Enum_Page), "Enum_Page", Enum_Page_items, 2);
-        Enum_Item_Init(PAGE(Enum_Page), ITEM(mode), "Mode", mode_enum_str, 3, Mode_Callback);
-        Enum_Item_Init(PAGE(Enum_Page), ITEM(state), "State", state_enum_str, 2, NULL);
-
-    Ordinary_Page_Init(PAGE(main_page), PAGE(User_Show_Page), "Show_Page", User_Show_Page_items, 4);
+    Ordinary_Page_Init(PAGE(main_page), PAGE(User_Show_Page), "Show", User_Show_Page_items, 4);
         Show_Item_Init(PAGE(User_Show_Page), ITEM(user_show_page__1__item), "Hour", UNSIGNED_CHAR, &Easy_Menu_Ui_Data.hours, 10, User_Show_Page__1__Item_Callback);
         Show_Item_Init(PAGE(User_Show_Page), ITEM(user_show_page__2__item), "Minute", UNSIGNED_CHAR, &Easy_Menu_Ui_Data.minutes, 10, User_Show_Page__2__Item_Callback);
         Show_Item_Init(PAGE(User_Show_Page), ITEM(user_show_page__3__item), "Second", UNSIGNED_CHAR, &Easy_Menu_Ui_Data.seconds, 10, User_Show_Page__3__Item_Callback);
         Show_Item_Init(PAGE(User_Show_Page), ITEM(user_show_page__4__item), "Millisecond", UNSIGNED_CHAR, &Easy_Menu_Ui_Data.millisecond, 10, User_Show_Page__4__Item_Callback);
-
-    Ordinary_Page_Init(PAGE(main_page), PAGE(Goto_Page), "Goto_Page", Goto_Page_items, 4);
-        Goto_Item_Init(PAGE(Goto_Page), ITEM(goto__goto_1_page), "Goto 1 Page", PAGE(goto_1_page));
-        Goto_Item_Init(PAGE(Goto_Page), ITEM(goto__Goto_Page_2), "Goto Page 2", NULL);
-        Goto_Item_Init(PAGE(Goto_Page), ITEM(goto__goto_3_page), "Goto 3 Page", PAGE(goto_3_page));
-        Goto_Item_Init(PAGE(Goto_Page), ITEM(goto__Goto_Page_4), "Goto Page 4", NULL);
-
-    Ordinary_Page_Init(PAGE(Goto_Page), PAGE(goto_1_page), "Goto 1 Page", goto_1_page_items, 1);
-        Goto_Item_Init(PAGE(goto_1_page), ITEM(goto__goto_11_page), "Goto 11 Page", PAGE(goto_11_page));
-
-    Ordinary_Page_Init(PAGE(goto_1_page), PAGE(goto_11_page), "Goto 11 Page", goto_11_page_items, 1);
-        Goto_Item_Init(PAGE(goto_11_page), ITEM(goto__goto_111_page), "Goto 111 Page", PAGE(goto_111_page));
-
-    Ordinary_Page_Init(PAGE(goto_11_page), PAGE(goto_111_page), "Goto 111 Page", goto_111_page_items, 2);
-        Text_Item_Init(PAGE(goto_111_page), ITEM(goto_111_page__1__item), "Hello World!!!", NULL);
-        Goto_Item_Init(PAGE(goto_111_page), ITEM(goto__goto_111_page__2__item), "Home", PAGE(main_page));
-
-    Ordinary_Page_Init(PAGE(Goto_Page), PAGE(goto_3_page), "Goto 3 Page", goto_3_page_items, 1);
-        Text_Item_Init(PAGE(goto_3_page), ITEM(test), "TEST", NULL);
     
     Easy_Menu_Goto_Page(PAGE(main_page));
 }

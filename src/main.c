@@ -29,9 +29,6 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* Standard includes. */
-#include <stdio.h>
-
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -39,28 +36,27 @@
 /* TI includes */
 #include "ti_msp_dl_config.h"
 
-#include "board_led.h"
 #include "UART0_Debug.h"
 #include "logger.h"
-#include "tim_delay.h"
-#include "app_control.h"
 #include "oled.h"
-#include "zdt_motor.h"
+#include "TB6612.h"
+#include "gray_adc.h"
+#include "control.h"
 #include "Easy_Menu_User.h"
 
 /* 定义任务栈大小和优先级 */
-#define LED_TASK_STACK_SIZE      512
-#define LED_TASK_PRIORITY        1
+#define CONTROL_TASK_STACK_SIZE  512
+#define CONTROL_TASK_PRIORITY    (tskIDLE_PRIORITY + 1)
+#define CONTROL_AUTO_RUN         0
 
 #define OLED_TASK_STACK_SIZE     512
-#define OLED_TASK_PRIORITY    (tskIDLE_PRIORITY + 2)
-#define KEY_TASK_STACK_SIZE   128
-#define KEY_TASK_PRIORITY     (tskIDLE_PRIORITY + 2)
+#define OLED_TASK_PRIORITY       (tskIDLE_PRIORITY + 2)
+#define KEY_TASK_STACK_SIZE      128
+#define KEY_TASK_PRIORITY        (tskIDLE_PRIORITY + 2)
 
 /* 静态任务控制块和栈空间 */
-static StaticTask_t led_task_tcb;
-static StackType_t led_task_stack[LED_TASK_STACK_SIZE];
-static TaskHandle_t led_task_handle = NULL;
+static StaticTask_t control_task_tcb;
+static StackType_t control_task_stack[CONTROL_TASK_STACK_SIZE];
 
 static StaticTask_t oled_task_tcb;
 static StackType_t oled_task_stack[OLED_TASK_STACK_SIZE];
@@ -69,17 +65,9 @@ static StaticTask_t key_task_tcb;
 static StackType_t key_task_stack[KEY_TASK_STACK_SIZE];
 
 /* 任务函数原型 */
-static void vLedBlinkTask(void *pvParameters);
+static void vControlTask(void *pvParameters);
 static void vOledDisplayTask(void *pvParameters);
 static void vKeyTask(void *pvParameters);
-
-
-static void zigbee_send_string(const char *str)
-{
-    while (*str) {
-        DL_UART_Main_transmitDataBlocking(UART_ZIGBEE_INST, *str++);
-    }
-}
 
 int main(void)
 {
@@ -87,15 +75,15 @@ int main(void)
     debug_uart_init();
     logger_init(); // 初始化异步日志引擎
     
-    /* 创建静态任务 - LED闪烁任务 */
-    led_task_handle = xTaskCreateStatic(
-        vLedBlinkTask,              /* 任务函数 */
-        "LedBlink",                 /* 任务名称 */
-        LED_TASK_STACK_SIZE,        /* 栈深度 */
+    /* 创建静态任务 - 小车控制/灰度采样任务 */
+    xTaskCreateStatic(
+        vControlTask,               /* 任务函数 */
+        "Control",                  /* 任务名称 */
+        CONTROL_TASK_STACK_SIZE,    /* 栈深度 */
         NULL,                       /* 参数 */
-        LED_TASK_PRIORITY,          /* 优先级 */
-        led_task_stack,             /* 栈内存 */
-        &led_task_tcb               /* 任务控制块 */
+        CONTROL_TASK_PRIORITY,      /* 优先级 */
+        control_task_stack,         /* 栈内存 */
+        &control_task_tcb           /* 任务控制块 */
     );
     
     /* 创建静态任务 - OLED 显示任务 */
@@ -158,130 +146,48 @@ static void vOledDisplayTask(void *pvParameters)
 static void vKeyTask(void *pvParameters)
 {
     (void) pvParameters;
-    
-    // 按键状态记录，0=未按下，1=已按下 (默认拉高)
-    uint8_t key1_last = 1, key2_last = 1, key3_last = 1, key4_last = 1;
-    
+
+    // PB21 已给灰度 AD2 使用；菜单按键只保留 PA27/PA26/PB23 三个输入。
+    uint8_t key_up_last = 1, key_down_last = 1, key_right_last = 1;
+
     while(1) {
-        // 读取按键电平，0为按下
-        uint8_t key1_cur = (DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN) & KEY_B21_PIN) ? 1 : 0;
-        uint8_t key2_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A27_PIN) & KEY_A27_PIN) ? 1 : 0;
-        uint8_t key3_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A26_PIN) & KEY_A26_PIN) ? 1 : 0;
-        uint8_t key4_cur = (DL_GPIO_readPins(KEY_PORT, KEY_B23_PIN) & KEY_B23_PIN) ? 1 : 0;
-        
-        // 检测下降沿（按下）
-        if (key1_last == 1 && key1_cur == 0) {
-            Easy_Menu_Input(EASY_MENU_RIGHT);
-        }
-        if (key2_last == 1 && key2_cur == 0) {
+        uint8_t key_up_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A27_PIN) & KEY_A27_PIN) ? 1 : 0;
+        uint8_t key_down_cur = (DL_GPIO_readPins(KEY_A_PORT, KEY_A26_PIN) & KEY_A26_PIN) ? 1 : 0;
+        uint8_t key_right_cur = (DL_GPIO_readPins(KEY_PORT, KEY_B23_PIN) & KEY_B23_PIN) ? 1 : 0;
+
+        if (key_up_last == 1 && key_up_cur == 0) {
             Easy_Menu_Input(EASY_MENU_UP);
         }
-        if (key3_last == 1 && key3_cur == 0) {
+        if (key_down_last == 1 && key_down_cur == 0) {
             Easy_Menu_Input(EASY_MENU_DOWN);
         }
-        if (key4_last == 1 && key4_cur == 0) {
-            Easy_Menu_Input(EASY_MENU_LEFT);
+        if (key_right_last == 1 && key_right_cur == 0) {
+            Easy_Menu_Input(EASY_MENU_RIGHT);
         }
-        
-        key1_last = key1_cur;
-        key2_last = key2_cur;
-        key3_last = key3_cur;
-        key4_last = key4_cur;
-        
+
+        key_up_last = key_up_cur;
+        key_down_last = key_down_cur;
+        key_right_last = key_right_cur;
+
         vTaskDelay(pdMS_TO_TICKS(20)); // 20ms 软件消抖
     }
 }
 
-/* LED闪烁/按键控制任务实现 */
-static void vLedBlinkTask(void *pvParameters)
+/* 小车控制/灰度采样任务实现 */
+static void vControlTask(void *pvParameters)
 {
-    /* 防止编译器警告 */
     (void) pvParameters;
-    // 初始化解耦控制器（基于物理引脚上电时的真实初始状态进行初始化，避免上电误触发）
-    uint32_t init_pin = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
-    app_key_state_e init_key_state = (init_pin & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
-    app_context_t app_ctx;
-    app_control_init(&app_ctx, init_key_state);
-    
-    // [修复 Bug #1] 调度器已正常启动，此时安全地清除挂起标志并使能按键 NVIC 中断
-    NVIC_ClearPendingIRQ(GPIOB_INT_IRQn);
-    NVIC_EnableIRQ(GPIOB_INT_IRQn);
-    
-    // 初始化并使能张大头电机（地址 0x01）
-    zdt_motor_init();
-    zdt_motor_enable(0x01, true);
-    
-    // 延时等待电机锁轴稳定
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    for (;;)
-    {
-        // 等唤醒通知
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        
-        // 1. 物理消抖：等待 10ms 避开机械抖动区，在此期间任务挂起并让出 CPU
-        // 注：此时引脚中断在 ISR 中已被立刻禁用，因此延时期间绝对不会累加多余通知
-        vTaskDelay(pdMS_TO_TICKS(10));
-        
-        // 2. 读取消抖稳定后的最终硬件状态
-        uint32_t pin_val = DL_GPIO_readPins(KEY_PORT, KEY_B21_PIN);
-        app_key_state_e current_key_state = (pin_val & KEY_B21_PIN) ? APP_KEY_RELEASED : APP_KEY_PRESSED;
-        
-        // 3. 清除在消抖延时期间由于接触不良或物理回弹挂起的硬件中断标志
-        DL_GPIO_clearInterruptStatus(KEY_PORT, KEY_B21_PIN);
-        
-        // 4. 保底清空在此期间可能积累的多余任务通知，确保下一次等待为干净状态
-        ulTaskNotifyTake(pdTRUE, 0);
-        
-        // 5. 重新使能按键引脚中断，准备下一次检测
-        DL_GPIO_enableInterrupt(KEY_PORT, KEY_B21_PIN);
-        
-        // 6. 送入纯逻辑状态机（内部自动处理边缘检测）
-        bool toggled = app_control_update(&app_ctx, current_key_state);
-        
-        // 7. 处理逻辑层输出
-        if (toggled)
-        {
-            // 按键触发时发送 Zigbee 数据
-            // 发送唤醒字节 (0xFF)，唤醒可能处于休眠的 Zigbee 模块
-            DL_UART_Main_transmitDataBlocking(UART_ZIGBEE_INST, 0xFF);
-            // 给 Zigbee 模块留出 20ms 的射频唤醒和握手时间
-            vTaskDelay(pdMS_TO_TICKS(20));
-            // 模块完全就绪后，再连续发送完整数据包
-            // 使用中文“你好世界”测试，用于验证终端的 UTF-8/GBK 编码解析
-            zigbee_send_string("你好世界\r\n");
-            
-            // 打印按键触发日志
-            LOG_INFO("KEY (PB21) State Machine Triggered!");
-        }
-    }
-}
 
-/*
- * GPIOB (KEY_B21 所在组) 中断服务函数
- * 【中断分组映射说明】MSPM0 的 GPIOB 中断被路由到 INT_GROUP1，因此 ISR 函数名必须是
- * GROUP1_IRQHandler（由启动文件中的向量表决定）。对应的 NVIC IRQn 为 GPIOB_INT_IRQn。
- * 如果更换了 GPIO 端口，务必同步更新此 ISR 函数名与 NVIC_EnableIRQ 的 IRQn 参数。
- */
-void GROUP1_IRQHandler(void)
-{
-    // 获取 GPIOB 的中断状态
-    uint32_t pending = DL_GPIO_getEnabledInterruptStatus(GPIOB, KEY_B21_PIN);
-    
-    if (pending & KEY_B21_PIN)
-    {
-        // 1. [修复 Bug #2] 立即在中断层禁用引脚中断，锁死硬件状态，防范调度延迟期间的中断累加和吞键
-        DL_GPIO_disableInterrupt(GPIOB, KEY_B21_PIN);
-        
-        // 2. 清除中断标志
-        DL_GPIO_clearInterruptStatus(GPIOB, KEY_B21_PIN);
-        
-        // 3. 通知 LED 任务去处理电平变化
-        if (led_task_handle != NULL) {
-            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-            vTaskNotifyGiveFromISR(led_task_handle, &xHigherPriorityTaskWoken);
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        }
+    TB6612_Init();
+    GrayADC_Init();
+    GrayADC_InitSensor(GrayADC_GetSensor(), NULL, NULL);
+    Control_PID_Reset();
+
+    LOG_INFO("GrayADC and TB6612 initialized");
+
+    for (;;) {
+        Control_Service();
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 

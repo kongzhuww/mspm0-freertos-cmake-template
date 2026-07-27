@@ -195,6 +195,48 @@ extern "C" {
 #define UART_ZIGBEE_INST_INT_IRQN                                 UART1_INT_IRQn
 #define UART_ZIGBEE_INST_IRQHandler                             UART1_IRQHandler
 
+/* Defines for GRAY_ADC: OUT=PA21/ADC1_CH7, AD0=PB19, AD1=PB24, AD2=PB21 */
+#define GRAY_ADC_INST                                                    ADC1
+#define GRAY_ADC_MEM_IDX                                      DL_ADC12_MEM_IDX_0
+#define GRAY_ADC_INPUT_CHAN                              DL_ADC12_INPUT_CHAN_7
+#define GRAY_ADC_OUT_PORT                                               GPIOA
+#define GRAY_ADC_OUT_PIN                                       DL_GPIO_PIN_21
+#define GRAY_ADC_OUT_IOMUX                                      IOMUX_PINCM46
+#define GRAY_ADC_AD0_PORT                                               GPIOB
+#define GRAY_ADC_AD0_PIN                                      DL_GPIO_PIN_19
+#define GRAY_ADC_AD0_IOMUX                                     IOMUX_PINCM45
+#define GRAY_ADC_AD1_PORT                                               GPIOB
+#define GRAY_ADC_AD1_PIN                                      DL_GPIO_PIN_24
+#define GRAY_ADC_AD1_IOMUX                                     IOMUX_PINCM52
+#define GRAY_ADC_AD2_PORT                                               GPIOB
+#define GRAY_ADC_AD2_PIN                                      DL_GPIO_PIN_21
+#define GRAY_ADC_AD2_IOMUX                                     IOMUX_PINCM49
+#define GRAY_ADC_ADDR_INVERTED                                           (1)
+
+/* Defines for TB6612: PWMA=PA17/TIMA1_CCP0, PWMB=PA16/TIMA1_CCP1 */
+#define TB6612_PWM_INST                                                TIMA1
+#define TB6612_PWM_PERIOD                                             (2000U)
+#define TB6612_PWMA_PORT                                               GPIOA
+#define TB6612_PWMA_PIN                                      DL_GPIO_PIN_17
+#define TB6612_PWMA_IOMUX                                     IOMUX_PINCM39
+#define TB6612_PWMA_IOMUX_FUNC                        IOMUX_PINCM39_PF_TIMA1_CCP0
+#define TB6612_PWMB_PORT                                               GPIOA
+#define TB6612_PWMB_PIN                                      DL_GPIO_PIN_16
+#define TB6612_PWMB_IOMUX                                     IOMUX_PINCM38
+#define TB6612_PWMB_IOMUX_FUNC                        IOMUX_PINCM38_PF_TIMA1_CCP1
+#define TB6612_AIN1_PORT                                               GPIOA
+#define TB6612_AIN1_PIN                                      DL_GPIO_PIN_18
+#define TB6612_AIN1_IOMUX                                     IOMUX_PINCM40
+#define TB6612_AIN2_PORT                                               GPIOA
+#define TB6612_AIN2_PIN                                      DL_GPIO_PIN_15
+#define TB6612_AIN2_IOMUX                                     IOMUX_PINCM37
+#define TB6612_BIN1_PORT                                               GPIOB
+#define TB6612_BIN1_PIN                                      DL_GPIO_PIN_22
+#define TB6612_BIN1_IOMUX                                     IOMUX_PINCM50
+#define TB6612_BIN2_PORT                                               GPIOA
+#define TB6612_BIN2_PIN                                      DL_GPIO_PIN_22
+#define TB6612_BIN2_IOMUX                                     IOMUX_PINCM47
+
 
 /* clang-format on */
 
@@ -206,6 +248,9 @@ void SYSCFG_DL_TIM_delay_us_init(void);
 void SYSCFG_DL_UART_DEBUG_init(void);
 void SYSCFG_DL_UART_ZDT_init(void);
 void SYSCFG_DL_UART_ZIGBEE_init(void);
+void SYSCFG_DL_GRAY_ADC_init(void);
+void SYSCFG_DL_TB6612_PWM_init(void);
+void SYSCFG_DL_TB6612_setPWMDuty(uint16_t dutyA, uint16_t dutyB);
 
 
 bool SYSCFG_DL_saveConfiguration(void);
