@@ -2,22 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "[1] 构建本地测试 (Local Test)",
-            "type": "process",
-            "command": "powershell",
-            "args": [
-                "-NoProfile",
-                "-Command",
-                "Write-Host '==> 开始配置本地测试环境' -ForegroundColor Cyan; cmake -G Ninja -B build_test; if (-not $?) { Write-Host '[失败] 本地环境配置失败' -ForegroundColor Red; exit 1 }; Write-Host '==> 开始编译本地测试' -ForegroundColor Cyan; cmake --build build_test; if ($?) { Write-Host '[成功] 本地测试编译成功!' -ForegroundColor Green } else { Write-Host '[失败] 本地测试编译失败' -ForegroundColor Red; exit 1 }"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": ["$gcc"],
-            "group": "build"
-        },
-        {
-            "label": "[2] 构建单片机固件 (MCU Firmware)",
+            "label": "[1] 构建单片机固件 (MCU Firmware)",
             "type": "process",
             "command": "powershell",
             "args": [
@@ -32,7 +17,7 @@
             "group": "build"
         },
         {
-            "label": "[3] 烧录单片机固件 (Flash MCU)",
+            "label": "[2] 烧录单片机固件 (Flash MCU)",
             "type": "process",
             "command": "powershell",
             "args": [

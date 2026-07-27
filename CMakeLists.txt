@@ -149,38 +149,5 @@ if(CMAKE_CROSSCOMPILING)
         COMMENT "Generating BIN, HEX and printing executable size..."
     )
 else()
-    # --------- 本机编译及测试 ---------
-    message(STATUS "PC test build mode")
-    
-    # 启用测试
-    enable_testing()
-    
-    # (已移除全局 include_directories，改为 Target 精准配置)
-    
-    # 将 Unity 框架剥离为静态库，免受 clang-tidy 打扰
-    add_library(unity_lib STATIC ${CMAKE_CURRENT_SOURCE_DIR}/test/unity/unity.c)
-    # 为 Unity 库配置头文件，并设为 PUBLIC 传递给依赖它的测试程序
-    target_include_directories(unity_lib PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/unity
-    )
-    
-    set(TEST_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/app_control.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/test/test_app_control.c
-    )
-    
-    add_executable(run_tests ${TEST_SOURCES})
-    # 为测试程序配置业务头文件
-    target_include_directories(run_tests PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
-    target_link_libraries(run_tests PRIVATE unity_lib component_dummy_sensor)
-
-    # 将单元测试也加入到单例的 clang-tidy 静态检查
-    if(CLANG_TIDY_EXE)
-        # set_target_properties(run_tests PROPERTIES C_CLANG_TIDY "${MY_CLANG_TIDY_CMD}")
-    endif()
-
-    add_test(NAME run_tests COMMAND run_tests)
-    
+    message(FATAL_ERROR "This project only supports MCU firmware builds. Configure with -DCMAKE_TOOLCHAIN_FILE=\"gcc-arm-none-eabi.cmake\".")
 endif()
