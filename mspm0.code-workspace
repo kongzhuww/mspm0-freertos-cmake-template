@@ -3,5 +3,14 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"python.analysis.extraPaths": [
+			"C:\\Users\\33583\\.kendryte\\k230_canmv_stubs\\9b151afe945fc2ba2542f7f36604c9d645ce349c"
+		],
+		"python.analysis.stubPath": "C:\\Users\\33583\\.kendryte\\k230_canmv_pylance\\f1e35e7db13a8b32\\typings",
+		"python.analysis.diagnosticSeverityOverrides": {
+			"reportMissingModuleSource": "none"
+		}
+	}
 }
